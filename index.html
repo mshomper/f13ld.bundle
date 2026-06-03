@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>F13LD · Bundle Builder</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:#06080f;color:#e0e0ff;font-family:system-ui,sans-serif}
+#container{display:flex;flex-direction:column;height:100vh}
+#cw{position:relative;background:#06080f;border-radius:12px 12px 0 0;overflow:hidden;border:0.5px solid #2a2a3a;flex:1;min-height:0;margin:16px 14px 0}
+canvas{display:block;width:100%;height:100%}
+#status{position:absolute;bottom:10px;left:10px;background:rgba(6,8,15,0.85);padding:5px 10px;border-radius:6px;font-size:11px;color:#555;pointer-events:none;border:0.5px solid #2a2a3a;z-index:10}
+#indicators{position:absolute;top:10px;left:10px;display:none;gap:8px;flex-direction:column;pointer-events:none;z-index:10}
+#qualityOverlay{position:absolute;bottom:10px;right:10px;display:none;gap:4px;z-index:10}
+#qualityOverlay button{background:rgba(6,8,15,0.85);color:#555;border:0.5px solid #2a2a3a;border-radius:5px;font-size:10px;padding:3px 7px;cursor:pointer}
+#qualityOverlay button.active{color:#22d3ee;border-color:#22d3ee}
+.ind-pill{display:flex;align-items:center;gap:5px;background:rgba(6,8,15,0.85);padding:4px 8px;border-radius:6px;font-size:10px;border:0.5px solid #2a2a3a;white-space:nowrap}
+.ind-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.ind-label{color:#555;text-transform:uppercase;letter-spacing:0.06em}
+#panel{background:#111118;border:0.5px solid #2a2a3a;border-top:none;border-radius:0 0 12px 12px;padding:12px 14px;overflow-y:auto;max-height:52vh;margin:0 14px 14px}
+hr.divider{border:none;border-top:0.5px solid #2a2a3a;margin:10px 0}
+.sec-lbl{font-size:10px;color:#18f370;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px}
+.sc-group{display:flex;align-items:center;gap:6px;margin-bottom:22px}
+.sc-group label{font-size:12px;color:#888;white-space:nowrap;min-width:84px}
+.sc-group input[type=range]{flex:1;accent-color:#22d3ee;height:5px;background:#1a1a2e;border-radius:3px;outline:none;-webkit-appearance:none;appearance:none}
+.sc-group input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:26px;height:26px;background:#0e1a2e;border:2.5px solid #22d3ee;border-radius:50%;cursor:pointer;box-shadow:0 0 6px rgba(34,211,238,0.35)}
+.sc-group input[type=range]::-moz-range-thumb{width:26px;height:26px;background:#0e1a2e;border:2.5px solid #22d3ee;border-radius:50%;cursor:pointer;box-shadow:0 0 6px rgba(34,211,238,0.35)}
+.sc-group .sv{font-size:12px;font-weight:500;color:#e0e0ff;min-width:40px;font-variant-numeric:tabular-nums;text-align:right}
+.mode-strip{display:flex;gap:4px}
+.mode-btn{font-size:11px;padding:3px 10px;border:0.5px solid #3a3a5a;border-radius:20px;background:transparent;color:#888;cursor:pointer}
+.mode-btn.active{background:#7c6ff7;color:#fff;border-color:#7c6ff7}
+select{font-size:12px;padding:3px 6px;background:#1a1a2e;border:0.5px solid #3a3a5a;border-radius:5px;color:#e0e0ff;cursor:pointer;width:100%}
+.surf-controls{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin-bottom:8px}
+.row-disabled{opacity:0.35;pointer-events:none}
+.toggle-btn{font-size:11px;padding:3px 10px;border:0.5px solid #3a3a5a;border-radius:20px;background:transparent;color:#888;cursor:pointer;transition:color 0.15s,border-color 0.15s,background 0.15s}
+.toggle-btn.on{background:rgba(124,111,247,0.15);color:#a89cf7;border-color:#7c6ff7}
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@500;700&display=swap');
+.f13ld-header{display:flex;align-items:center;justify-content:space-between;background:#06080f;border-bottom:0.5px solid #1a2a1a;padding:0 14px;height:48px;flex-shrink:0;font-family:'Exo 2',system-ui,sans-serif}
+.fh-left{display:flex;align-items:center;gap:10px}
+.fh-brand{display:flex;align-items:center;gap:8px;text-decoration:none}
+.fh-wordmark{font-size:17px;font-weight:700;letter-spacing:0.1em;line-height:1}
+.fh-divider{width:0.5px;height:24px;background:#1a2a1a}
+.fh-tool-name{font-size:15px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;line-height:1}
+.fh-right{display:flex;align-items:center;gap:10px}
+.fh-version{font-size:10px;color:#2a3a2a;letter-spacing:0.1em;font-family:'Exo 2',system-ui,sans-serif}
+.fh-icon{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* Homogenization */
+.homo-controls{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:8px}
+.homo-controls label{font-size:12px;color:#888;display:flex;align-items:center;gap:4px}
+input[type=number]{font-size:12px;padding:2px 4px;background:#1a1a2e;border:0.5px solid #3a3a5a;border-radius:5px;color:#e0e0ff;width:56px;text-align:center}
+#runHomoBtn{font-size:12px;padding:4px 14px;border:0.5px solid #7c6ff7;border-radius:20px;background:#7c6ff7;color:#fff;cursor:pointer;font-weight:500}
+#runHomoBtn:disabled{opacity:0.5;cursor:default}
+#exportBtn{font-size:12px;padding:3px 10px;border:0.5px solid #2a2a3a;border-radius:20px;background:transparent;color:#666;cursor:pointer;width:100%;margin-top:6px}
+.fh-mesh-btn{font-size:11px;padding:4px 12px;border:0.5px solid #1D9E75;border-radius:20px;background:rgba(29,158,117,0.08);color:#1D9E75;cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap;transition:background 0.15s}
+.fh-mesh-btn:hover{background:rgba(29,158,117,0.18)}
+
+#axisCanvas{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:12;display:none}
+</style>
+</head>
+<body>
+<div id="container">
+<div class="f13ld-header">
+  <div class="fh-left">
+    <a class="fh-brand" href="https://f13ld.app" target="_blank">
+      <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <defs><clipPath id="f13-clip"><path d="M50,5 C91,5 95,9 95,50 C95,91 91,95 50,95 C9,95 5,91 5,50 C5,9 9,5 50,5Z"/></clipPath></defs>
+        <path d="M50,5 C91,5 95,9 95,50 C95,91 91,95 50,95 C9,95 5,91 5,50 C5,9 9,5 50,5Z" fill="#111e13" stroke="#1D9E75" stroke-width="5"/>
+        <g clip-path="url(#f13-clip)" fill="none">
+          <path d="M0,50 Q25,40 50,50 Q75,60 100,50" stroke="#c8f542" stroke-width="6"/>
+          <path d="M50,0 Q40,25 50,50 Q60,75 50,100" stroke="#c8f542" stroke-width="6"/>
+          <path d="M0,31 Q25,21 50,31 Q75,41 100,31" stroke="#2c4e30" stroke-width="3"/>
+          <path d="M0,69 Q25,59 50,69 Q75,79 100,69" stroke="#2c4e30" stroke-width="3"/>
+          <path d="M31,0 Q21,25 31,50 Q41,75 31,100" stroke="#2c4e30" stroke-width="3"/>
+          <path d="M69,0 Q59,25 69,50 Q79,75 69,100" stroke="#2c4e30" stroke-width="3"/>
+          <circle cx="50" cy="50" r="7" fill="#c8f542"/>
+        </g>
+        <path d="M50,5 C91,5 95,9 95,50 C95,91 91,95 50,95 C9,95 5,91 5,50 C5,9 9,5 50,5Z" fill="none" stroke="#1D9E75" stroke-width="5"/>
+      </svg>
+      <div class="fh-wordmark"><span style="color:#1D9E75">F</span><span style="color:#c8f542">1</span><span style="color:#c8f542">3</span><span style="color:#1D9E75">LD</span></div>
+    </a>
+    <div class="fh-divider"></div>
+    <div class="fh-tool-name" style="color:#7B4F9E">BUNDLE</div>
+  </div>
+  <div class="fh-right">
+    <button class="fh-mesh-btn" onclick="openInMesh()">&#11041; Open in F13LD.mesh</button>
+    <span class="fh-version">v0.2.3</span>
+    <div class="fh-icon" style="background:#EEE8F8">
+      <svg width="18" height="18" viewBox="0 0 40 40">
+        <path d="M2,10 C8,10 12,30 20,20 C28,10 32,30 38,30" stroke="#7B4F9E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M2,30 C8,30 12,10 20,20 C28,30 32,10 38,10" stroke="#7B4F9E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M2,20 C5,12 9,12 14,15" stroke="#7B4F9E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M17,18 C20,24 24,28 29,26" stroke="#7B4F9E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+        <path d="M32,23 C35,21 38,20 38,20" stroke="#7B4F9E" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+</div>
+<div id="cw">
+  <canvas id="glCanvas" style="display:none;"></canvas>
+  <canvas id="sectionCanvas"></canvas>
+  <canvas id="axisCanvas"></canvas>
+  <div id="status">Ready</div>
+  <div id="indicators">
+    <div class="ind-pill">
+      <div class="ind-dot" id="dotShader" style="background:#22d3ee"></div>
+      <span class="ind-label">shader</span>
+      <span id="labelShader" style="color:#22d3ee;font-size:10px">ready</span>
+    </div>
+  </div>
+  <div id="qualityOverlay" style="display:none">
+    <button id="btnQLow" class="active" onclick="onQuality('low')">Low</button>
+    <button id="btnQMed" onclick="onQuality('medium')">Med</button>
+    <button id="btnQHigh" onclick="onQuality('high')">High</button>
+  </div>
+</div>
+<div id="panel">
+  <div class="surf-controls" style="margin-bottom:6px">
+    <div class="sc-group" style="margin-bottom:0">
+      <label>view</label>
+      <div class="mode-strip">
+        <button class="mode-btn" id="btnViewSheet" onclick="onView('sheet')">Sheet 3D</button>
+        <button class="mode-btn active" id="btnViewSection" onclick="onView('section')">Section 2D</button>
+      </div>
+    </div>
+  </div>
+  <div class="sc-group" id="sliceCtrl">
+    <label>slice pos</label>
+    <div class="mode-strip" style="margin-right:4px">
+      <button class="mode-btn active" id="btnAxisZ" onclick="onAxis('z')">Z</button>
+      <button class="mode-btn" id="btnAxisY" onclick="onAxis('y')">Y</button>
+      <button class="mode-btn" id="btnAxisX" onclick="onAxis('x')">X</button>
+    </div>
+    <input type="range" id="slicePos" min="0" max="1" step="0.01" value="0.5" oninput="onSlice(this)">
+    <span class="sv" id="sliceVal">0.50</span>
+    <div class="mode-strip" style="margin-left:6px">
+      <button class="mode-btn" id="btnR64" onclick="onRes(64)">64</button>
+      <button class="mode-btn active" id="btnR128" onclick="onRes(128)">128</button>
+      <button class="mode-btn" id="btnR256" onclick="onRes(256)">256</button>
+    </div>
+  </div>
+  <hr class="divider">
+  <div class="sec-lbl">structure</div>
+  <div style="margin-bottom:12px">
+    <select id="structure" onchange="onStructure()">
+      <option value="0">Bundle &mdash; twisted fiber array</option>
+      <option value="1">Helicoid &mdash; minimal ruled surface</option>
+      <option value="2">Braid &mdash; interlocked helical strands</option>
+      <option value="3">Weave &mdash; plain woven fiber sheet</option>
+    </select>
+  </div>
+
+  <!-- BUNDLE BLOCK -->
+  <div id="blockBundle">
+    <div class="sec-lbl">beam</div>
+    <div class="sc-group" style="margin-bottom:10px">
+      <label>shape</label>
+      <div class="mode-strip">
+        <button class="mode-btn active" id="btnShapeCircle" onclick="onShape('circle')">&#9679; Circle</button>
+        <button class="mode-btn" id="btnShapeRounded" onclick="onShape('rounded')">&#9677; Rounded</button>
+        <button class="mode-btn" id="btnShapeSquare" onclick="onShape('square')">&#9632; Square</button>
+      </div>
+    </div>
+    <div class="sc-group">
+      <label>radius</label>
+      <input type="range" id="beamR" min="0.03" max="0.25" step="0.005" value="0.09" oninput="onP(this,'beamRv')">
+      <span class="sv" id="beamRv">0.090</span>
+    </div>
+    <hr class="divider">
+    <div class="sec-lbl">bundle</div>
+    <div class="sc-group">
+      <label>beams / side</label>
+      <input type="range" id="beamN" min="1" max="4" step="1" value="2" oninput="onP(this,'beamNv',0)">
+      <span class="sv" id="beamNv">2</span>
+    </div>
+    <div class="sc-group">
+      <label>spacing</label>
+      <input type="range" id="beamD" min="0.10" max="0.60" step="0.005" value="0.28" oninput="onP(this,'beamDv')">
+      <span class="sv" id="beamDv">0.280</span>
+    </div>
+    <div class="sc-group">
+      <label>column gap</label>
+      <input type="range" id="bundleGap" min="-0.80" max="0.50" step="0.005" value="0.20" oninput="onP(this,'bundleGapV')">
+      <span class="sv" id="bundleGapV">0.200</span>
+    </div>
+    <div class="sc-group">
+      <label>blend k</label>
+      <input type="range" id="blendK" min="0.00" max="0.08" step="0.002" value="0.01" oninput="onP(this,'blendKV')">
+      <span class="sv" id="blendKV">0.010</span>
+    </div>
+    <hr class="divider">
+    <div class="sec-lbl">helix</div>
+    <div class="sc-group">
+      <label>twist rate</label>
+      <input type="range" id="twistRate" min="0.0" max="4.0" step="0.05" value="1.20" oninput="onP(this,'twistRateV')">
+      <span class="sv" id="twistRateV">1.200</span>
+    </div>
+    <div class="sc-group" style="margin-bottom:6px">
+      <label>twist mode</label>
+      <div class="mode-strip">
+        <button class="mode-btn active" id="btnTwistU" onclick="onTwistMode(0)">Uniform</button>
+        <button class="mode-btn" id="btnTwistC" onclick="onTwistMode(1)">Checkerboard</button>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="sec-lbl">warp</div>
+    <div class="sc-group" style="margin-bottom:10px">
+      <label>warp axis</label>
+      <div class="mode-strip">
+        <button class="mode-btn active" id="btnWarpOff" onclick="onWarpMode(0)">Off</button>
+        <button class="mode-btn" id="btnWarpX" onclick="onWarpMode(1)">X</button>
+        <button class="mode-btn" id="btnWarpXY" onclick="onWarpMode(2)">XY</button>
+      </div>
+    </div>
+    <div id="warpSliders" class="row-disabled">
+      <div class="sc-group">
+        <label>amplitude</label>
+        <input type="range" id="warpAmp" min="0.00" max="0.40" step="0.005" value="0.15" oninput="onP(this,'warpAmpV')">
+        <span class="sv" id="warpAmpV">0.150</span>
+      </div>
+      <div class="sc-group">
+        <label>frequency</label>
+        <input type="range" id="warpFreq" min="0.30" max="4.00" step="0.05" value="1.50" oninput="onP(this,'warpFreqV')">
+        <span class="sv" id="warpFreqV">1.500</span>
+      </div>
+      <div class="sc-group" style="margin-bottom:4px">
+        <label>frame</label>
+        <div class="mode-strip">
+          <button class="mode-btn active" id="btnFrameW" onclick="onWarpFrame(0)">World</button>
+          <button class="mode-btn" id="btnFrameF" onclick="onWarpFrame(1)">Fiber</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HELICOID BLOCK -->
+  <div id="blockHelicoid" style="display:none">
+    <div class="sec-lbl">surface</div>
+    <div class="sc-group">
+      <label>pitch &omega;</label>
+      <input type="range" id="hPitch" min="0.3" max="4.0" step="0.05" value="1.5" oninput="onP(this,'hPitchV')">
+      <span class="sv" id="hPitchV">1.500</span>
+    </div>
+    <div class="sc-group">
+      <label>thickness</label>
+      <input type="range" id="hThick" min="0.01" max="0.15" step="0.005" value="0.04" oninput="onP(this,'hThickV')">
+      <span class="sv" id="hThickV">0.040</span>
+    </div>
+    <div class="sc-group">
+      <label>inner radius</label>
+      <input type="range" id="hInner" min="0.05" max="0.80" step="0.01" value="0.25" oninput="onP(this,'hInnerV')">
+      <span class="sv" id="hInnerV">0.250</span>
+    </div>
+    <div class="sc-group">
+      <label>outer radius</label>
+      <input type="range" id="hOuter" min="0.30" max="2.00" step="0.02" value="1.20" oninput="onP(this,'hOuterV')">
+      <span class="sv" id="hOuterV">1.200</span>
+    </div>
+    <div class="sc-group" style="margin-bottom:10px">
+      <label>starts</label>
+      <div class="mode-strip">
+        <button class="mode-btn active" id="btnHS1" onclick="onHStarts(1)">1</button>
+        <button class="mode-btn" id="btnHS2" onclick="onHStarts(2)">2</button>
+        <button class="mode-btn" id="btnHS3" onclick="onHStarts(3)">3</button>
+      </div>
+    </div>
+    <hr class="divider">
+    <div class="sec-lbl">handedness</div>
+    <div class="sc-group" style="margin-bottom:10px">
+      <label>column XY</label>
+      <button id="btnHColHand" class="toggle-btn" onclick="onHColHand()">Checkerboard</button>
+    </div>
+    <div class="sc-group" style="margin-bottom:10px">
+      <label>layer Z</label>
+      <button id="btnHZHand" class="toggle-btn" onclick="onHZHand()">Alternating</button>
+    </div>
+    <hr class="divider">
+    <div class="sec-lbl">tiling</div>
+    <div class="sc-group">
+      <label>blend k</label>
+      <input type="range" id="hBlend" min="0.00" max="0.08" step="0.002" value="0.000" oninput="onP(this,'hBlendV')">
+      <span class="sv" id="hBlendV">0.000</span>
+    </div>
+    <div class="sc-group">
+      <label>column gap</label>
+      <input type="range" id="hGap" min="-0.80" max="1.00" step="0.02" value="0.40" oninput="onP(this,'hGapV')">
+      <span class="sv" id="hGapV">0.400</span>
+    </div>
+  </div>
+  <div id="blockBraid" style="display:none">
+    <div class="sec-lbl">strands</div>
+    <div class="sc-group" style="margin-bottom:10px">
+      <label>count N</label>
+      <div class="mode-strip">
+        <button class="mode-btn" id="btnBN2" onclick="onBraidN(2)">2</button>
+        <button class="mode-btn active" id="btnBN3" onclick="onBraidN(3)">3</button>
+        <button class="mode-btn" id="btnBN4" onclick="onBraidN(4)">4</button>
+      </div>
+    </div>
+    <div class="sc-group">
+      <label>braid radius</label>
+      <input type="range" id="bRadius" min="0.10" max="1.50" step="0.02" value="0.50" oninput="onP(this,'bRadiusV')">
+      <span class="sv" id="bRadiusV">0.500</span>
+    </div>
+    <div class="sc-group">
+      <label>pitch &omega;</label>
+      <input type="range" id="bPitch" min="0.3" max="4.0" step="0.05" value="1.20" oninput="onP(this,'bPitchV')">
+      <span class="sv" id="bPitchV">1.200</span>
+    </div>
+    <div class="sc-group">
+      <label>fiber radius</label>
+      <input type="range" id="bFiber" min="0.03" max="0.30" step="0.005" value="0.12" oninput="onP(this,'bFiberV')">
+      <span class="sv" id="bFiberV">0.120</span>
+    </div>
+    <div class="sc-group">
+      <label>blend k</label>
+      <input type="range" id="bBlend" min="0.00" max="0.08" step="0.002" value="0.02" oninput="onP(this,'bBlendV')">
+      <span class="sv" id="bBlendV">0.020</span>
+    </div>
+    <hr class="divider">
+    <div class="sec-lbl">handedness</div>
+    <div class="sc-group" style="margin-bottom:10px">
+      <label>column XY</label>
+      <button id="btnBColHand" class="toggle-btn" onclick="onBColHand()">Checkerboard</button>
+    </div>
+    <hr class="divider">
+    <div class="sec-lbl">tiling</div>
+    <div class="sc-group">
+      <label>column gap</label>
+      <input type="range" id="bGap" min="-0.80" max="1.00" step="0.02" value="0.30" oninput="onP(this,'bGapV')">
+      <span class="sv" id="bGapV">0.300</span>
+    </div>
+  </div>
+
+  <!-- WEAVE BLOCK -->
+  <div id="blockWeave" style="display:none">
+    <div class="sec-lbl">fiber</div>
+    <div class="sc-group">
+      <label>radius</label>
+      <input type="range" id="wvR" min="0.02" max="0.25" step="0.005" value="0.07" oninput="onP(this,'wvRv')">
+      <span class="sv" id="wvRv">0.070</span>
+    </div>
+    <hr class="divider">
+    <div class="sec-lbl">weave</div>
+    <div class="sc-group">
+      <label>pitch</label>
+      <input type="range" id="wvP" min="0.20" max="1.50" step="0.01" value="0.60" oninput="onP(this,'wvPv')">
+      <span class="sv" id="wvPv">0.600</span>
+    </div>
+    <div class="sc-group">
+      <label>amplitude</label>
+      <input type="range" id="wvA" min="0.00" max="0.40" step="0.005" value="0.14" oninput="onP(this,'wvAv')">
+      <span class="sv" id="wvAv">0.140</span>
+    </div>
+    <div class="sc-group">
+      <label>blend k</label>
+      <input type="range" id="wvBlend" min="0.00" max="0.06" step="0.002" value="0.010" oninput="onP(this,'wvBlendv')">
+      <span class="sv" id="wvBlendv">0.010</span>
+    </div>
+    <hr class="divider">
+    <div class="sec-lbl">z-stack</div>
+    <div class="sc-group">
+      <label>layer gap</label>
+      <input type="range" id="wvZGap" min="-0.30" max="0.60" step="0.01" value="0.05" oninput="onP(this,'wvZGapv')">
+      <span class="sv" id="wvZGapv">0.050</span>
+    </div>
+  </div>
+
+  <hr class="divider">
+  <!-- Z-STEP -->
+  <div id="zStepBlock">
+  <div class="sec-lbl">z-step</div>
+  <div class="sc-group">
+    <label>ramp X</label>
+    <input type="range" id="zRampX" min="-3.10" max="3.10" step="0.05" value="0.00" oninput="onP(this,'zRampXV')">
+    <span class="sv" id="zRampXV">0.000</span>
+  </div>
+  <div class="sc-group">
+    <label>ramp Y</label>
+    <input type="range" id="zRampY" min="-3.10" max="3.10" step="0.05" value="0.00" oninput="onP(this,'zRampYV')">
+    <span class="sv" id="zRampYV">0.000</span>
+  </div>
+  <div class="sc-group">
+    <label>checker step</label>
+    <input type="range" id="zChkStep" min="-3.10" max="3.10" step="0.05" value="0.00" oninput="onP(this,'zChkStepV')">
+    <span class="sv" id="zChkStepV">0.000</span>
+  </div>
+  </div>
+
+  <hr class="divider">
+  <!-- TOPOLOGY -->
+  <div class="sec-lbl">topology</div>
+  <div class="sc-group" style="margin-bottom:10px">
+    <label>mode</label>
+    <div class="mode-strip">
+      <button class="mode-btn active" id="btnTopoHalf" onclick="onTopoMode(0)">Half-solid</button>
+      <button class="mode-btn" id="btnTopoSheet" onclick="onTopoMode(1)">Sheet</button>
+    </div>
+  </div>
+  <div id="flipRow" style="display:flex;align-items:center;gap:6px;margin-bottom:16px">
+    <label style="font-size:12px;color:#888;min-width:84px">side</label>
+    <button id="btnFlip" onclick="onTopoFlip()" style="font-size:11px;padding:3px 12px;border:0.5px solid #22d3ee;border-radius:20px;background:transparent;color:#22d3ee;cursor:pointer;display:flex;align-items:center;gap:5px;transition:color 0.15s,border-color 0.15s">
+      <span id="flipGlyph" style="display:inline-block;transition:transform 0.25s;line-height:1;font-size:13px">&#9680;</span>
+      <span>flip side</span>
+    </button>
+  </div>
+  <div class="sc-group" id="sheetWidthRow" style="display:none">
+    <label>sheet width</label>
+    <input type="range" id="sheetWidth" min="0.005" max="0.08" step="0.002" value="0.025" oninput="onP(this,'sheetWidthV')">
+    <span class="sv" id="sheetWidthV">0.025</span>
+  </div>
+  <div class="sc-group">
+    <label>iso offset</label>
+    <input type="range" id="isoOffset" min="-0.15" max="0.15" step="0.002" value="0.00" oninput="onP(this,'isoOffsetV')">
+    <span class="sv" id="isoOffsetV">0.000</span>
+  </div>
+
+  <hr class="divider">
+
+  <!-- HOMOGENIZATION -->
+  <div class="sec-lbl">homogenization (MIL-HS)</div>
+  <div class="homo-controls">
+    <label>grid
+      <select id="homoGrid" style="width:70px">
+        <option value="32">32&#179;</option>
+        <option value="48" selected>48&#179;</option>
+        <option value="64">64&#179;</option>
+      </select>
+    </label>
+    <label>E&#8209;s (GPa) <input type="number" id="homoEs" value="100" min="1" max="1000" step="10"></label>
+    <label>&#957; <input type="number" id="homoNu" value="0.3" min="0" max="0.49" step="0.01"></label>
+    <button id="runHomoBtn" onclick="onRunHomogenization()">Run homogenization</button>
+  </div>
+  <div id="homoStatus" style="font-size:11px;color:#555;margin-bottom:7px;min-height:15px"></div>
+  <div id="homoResults" style="display:none;margin-bottom:8px">
+    <div id="homoMetrics" style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px">
+      <div style="background:#0e0e1a;border:0.5px solid #2a2a3a;border-radius:8px;padding:7px 8px">
+        <div style="font-size:10px;color:#555;margin-bottom:5px">directional stiffness</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <div style="font-size:11px;color:#555">A =</div>
+          <div id="zener-val" style="font-size:15px;font-weight:500;color:#888">&mdash;</div>
+          <div id="zener-label" style="font-size:10px;color:#555;flex:1;text-align:right">&mdash;</div>
+        </div>
+        <div style="position:relative;height:5px;background:#1a1a2a;border-radius:3px;margin-bottom:3px">
+          <div style="position:absolute;left:0;top:0;bottom:0;width:100%;border-radius:3px;background:linear-gradient(90deg,#e879f9 0%,#555 40%,#555 60%,#22d3ee 100%);opacity:0.4"></div>
+          <div style="position:absolute;left:40%;top:-1px;width:1px;height:7px;background:#555;opacity:0.8"></div>
+          <div id="zener-marker" style="position:absolute;top:-2px;width:2px;height:9px;background:#e0e0ff;border-radius:1px;left:40%;transition:left 0.4s"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#555">
+          <span>axial</span><span>A=1</span><span>diagonal</span>
+        </div>
+      </div>
+      <div style="background:#0e0e1a;border:0.5px solid #2a2a3a;border-radius:8px;padding:6px">
+        <div style="font-size:10px;color:#555;margin-bottom:4px">stiffness ellipsoid</div>
+        <div id="ellcv-wrap" style="position:relative;width:100%;padding-bottom:100%">
+          <canvas id="ellcv" style="position:absolute;top:0;left:0;width:100%;height:100%;border-radius:4px;display:block"></canvas>
+        </div>
+      </div>
+    </div>
+    <div style="font-size:10px;color:#444;line-height:1.5">&#9888; Periodic IHB &mdash; MIL computed over domain [-&#960;,&#960;]&#179;.</div>
+  </div>
+  <button id="exportBtn" onclick="onExportJSON()">Export JSON</button>
+
+</div>
+</div>
+<script>
+'use strict';
+// STATE
+var currentView='section',currentAxis='z',currentRes=128,currentQuality='low';
+var debounceTimer=null,slicePos=0.5;
+var structure=0;
+var twistMode=0,warpMode=0,warpFrame=0,beamShape='circle';
+var hStarts=1,hColHand=0,hZHand=0;
+var bN=3,bColHand=0;
+var topoMode=0,topoFlip=0;
+function shapeN(){return beamShape==='circle'?2:beamShape==='rounded'?4:16;}
+function getParams(){return{
+  structure:structure,quality:currentQuality,
+  r:parseFloat(document.getElementById('beamR').value),
+  n:shapeN(),
+  d:parseFloat(document.getElementById('beamD').value),
+  nx:parseInt(document.getElementById('beamN').value),
+  ny:parseInt(document.getElementById('beamN').value),
+  gap:parseFloat(document.getElementById('bundleGap').value),
+  blend:parseFloat(document.getElementById('blendK').value),
+  twist:parseFloat(document.getElementById('twistRate').value),
+  twistMode:twistMode,warpMode:warpMode,
+  warpAmp:parseFloat(document.getElementById('warpAmp').value),
+  warpFreq:parseFloat(document.getElementById('warpFreq').value),
+  warpFrame:warpFrame,
+  hPitch:parseFloat(document.getElementById('hPitch').value),
+  hThick:parseFloat(document.getElementById('hThick').value),
+  hInner:parseFloat(document.getElementById('hInner').value),
+  hOuter:parseFloat(document.getElementById('hOuter').value),
+  hStarts:hStarts,hColHand:hColHand,hZHand:hZHand,
+  hBlend:parseFloat(document.getElementById('hBlend').value),
+  hGap:parseFloat(document.getElementById('hGap').value),
+  bN:bN,bRadius:parseFloat(document.getElementById('bRadius').value),
+  bPitch:parseFloat(document.getElementById('bPitch').value),
+  bFiber:parseFloat(document.getElementById('bFiber').value),
+  bBlend:parseFloat(document.getElementById('bBlend').value),
+  bColHand:bColHand,
+  bGap:parseFloat(document.getElementById('bGap').value),
+  topoMode:topoMode,flip:topoFlip,
+  iso:parseFloat(document.getElementById('isoOffset').value),
+  sheetW:parseFloat(document.getElementById('sheetWidth').value),
+  zRampX:parseFloat(document.getElementById('zRampX').value),
+  zRampY:parseFloat(document.getElementById('zRampY').value),
+  zChkStep:parseFloat(document.getElementById('zChkStep').value),
+  wvR:parseFloat(document.getElementById('wvR').value),
+  wvP:parseFloat(document.getElementById('wvP').value),
+  wvA:parseFloat(document.getElementById('wvA').value),
+  wvBlend:parseFloat(document.getElementById('wvBlend').value),
+  wvZGap:parseFloat(document.getElementById('wvZGap').value)
+};}
+function getPeriod(p){
+  if(p.structure===0)return p.nx*p.d+p.gap;
+  if(p.structure===1)return 2*p.hOuter+p.hGap;
+  if(p.structure===2)return 2*(p.bRadius+p.bFiber)+p.bGap;
+  return p.wvP;
+}
+
+// JS SDF LIBRARY
+var SDF={
+  PI:Math.PI,TWO_PI:Math.PI*2,
+  smax:function(a,b,k){if(k<0.0001)return Math.max(a,b);var h=Math.max(k-Math.abs(a-b),0)/k;return Math.max(a,b)+h*h*k*0.25;},
+  smin:function(a,b,k){if(k<0.0001)return Math.min(a,b);var h=Math.max(k-Math.abs(a-b),0)/k;return Math.min(a,b)-h*h*k*0.25;},
+  tile:function(px,py,period){
+    var hp=period*0.5,SH=Math.PI;
+    var xm=((px+SH)%period+period)%period-hp;
+    var ym=((py+SH)%period+period)%period-hp;
+    var bi=Math.floor((px+SH)/period),bj=Math.floor((py+SH)/period);
+    return{xm:xm,ym:ym,bi:bi,bj:bj};
+  },
+  ckSign:function(bi,bj){return(((bi+bj)%2)+2)%2===0?1:-1;},
+  beamSDF:function(dx,dy,r,n){
+    if(n>=14)return r-Math.max(Math.abs(dx),Math.abs(dy));
+    if(n<=2.1)return r-Math.sqrt(dx*dx+dy*dy);
+    return r-Math.pow(Math.pow(Math.abs(dx),n)+Math.pow(Math.abs(dy),n),1/n);
+  },
+  bundleRaw:function(lx,ly,p){
+    var W=p.nx*p.d,hp=W*0.5,result=-1e6;
+    for(var j=0;j<p.ny;j++)for(var i=0;i<p.nx;i++){
+      var x0=(i-(p.nx-1)*0.5)*p.d,y0=(j-(p.ny-1)*0.5)*p.d;
+      if(Math.abs(x0)+p.r<=hp&&Math.abs(y0)+p.r<=hp)
+        result=SDF.smax(result,SDF.beamSDF(lx-x0,ly-y0,p.r,p.n),p.blend);
+    }
+    return result;
+  },
+  applyWarp:function(xm,ym,z,p){
+    if(p.warpMode===0)return[xm,ym];
+    var A=p.warpAmp,w=p.warpFreq;
+    if(p.warpMode===1){var cx=A*Math.sin(w*z),dC=A*w*Math.cos(w*z),L=Math.sqrt(1+dC*dC);return[(xm-cx)/L,ym];}
+    var cx=A*Math.sin(w*z),cy=A*Math.cos(w*z),L=Math.sqrt(1+A*A*w*w);
+    return[-(xm-cx)*Math.sin(w*z)-(ym-cy)*Math.cos(w*z),((xm-cx)*Math.cos(w*z)-(ym-cy)*Math.sin(w*z))/L];
+  },
+  bundleCell:function(xm,ym,pz,cs,p){
+    var ts=p.twistMode===0?1:cs;
+    var th=ts*p.twist*pz,cosT=Math.cos(th),sinT=Math.sin(th);
+    var lx,ly,w;
+    if(p.warpFrame===0){w=SDF.applyWarp(xm,ym,pz,p);lx=w[0]*cosT-w[1]*sinT;ly=w[0]*sinT+w[1]*cosT;}
+    else{var tx=xm*cosT-ym*sinT,ty=xm*sinT+ym*cosT;w=SDF.applyWarp(tx,ty,pz,p);lx=w[0];ly=w[1];}
+    return -SDF.bundleRaw(lx,ly,p);
+  },
+  bundle:function(px,py,pz_in,p){
+    var period=Math.max(p.nx*p.d+p.gap,0.01);
+    var hp=period*0.5,SH=Math.PI;
+    var xBase=((px+SH)%period+period)%period-hp;
+    var yBase=((py+SH)%period+period)%period-hp;
+    var biBase=Math.floor((px+SH)/period);
+    var bjBase=Math.floor((py+SH)/period);
+    var result=1e6;
+    for(var di=-1;di<=1;di++)for(var dj=-1;dj<=1;dj++){
+      var xm=xBase-di*period,ym=yBase-dj*period;
+      var bi=biBase+di,bj=bjBase+dj;
+      var cs=SDF.ckSign(bi,bj);
+      var pz=pz_in+bi*p.zRampX+bj*p.zRampY+cs*p.zChkStep;
+      result=SDF.smin(result,SDF.bundleCell(xm,ym,pz,cs,p),p.blend);
+    }
+    return result;
+  },
+  helicoidCell:function(xm,ym,pz,cs,p){
+    var omega=p.hPitch;
+    if(p.hColHand&&cs<0)omega=-omega;
+    // Alternating: reverse twist every other period via a smooth (C0/C1) oscillation
+    // of the accumulated twist angle, Lambda = 4*pi/|omega| (= two base periods).
+    var twAng,twRate;
+    if(p.hZHand){var hk=Math.abs(omega)*0.5;twRate=omega*Math.cos(hk*pz);twAng=(hk>1e-6?omega/hk:omega*pz)*Math.sin(hk*pz);}
+    else{twAng=omega*pz;twRate=omega;}
+    var rxy=Math.sqrt(xm*xm+ym*ym);
+    var rMask=Math.min(rxy-p.hInner,p.hOuter-rxy);
+    var phi=p.hStarts*Math.atan2(ym,xm)-twAng;
+    phi-=SDF.TWO_PI*Math.round(phi/SDF.TWO_PI);
+    var rSafe=Math.max(rxy,1e-4);
+    var gradMag=Math.sqrt(p.hStarts*p.hStarts/(rSafe*rSafe)+twRate*twRate);
+    var dSheet=Math.abs(phi)/gradMag-p.hThick;
+    return Math.max(dSheet,-rMask);
+  },
+  helicoid:function(px,py,pz_in,p){
+    var period=Math.max(2*p.hOuter+p.hGap,0.01);
+    var hp=period*0.5,SH=Math.PI;
+    var xBase=((px+SH)%period+period)%period-hp;
+    var yBase=((py+SH)%period+period)%period-hp;
+    var biBase=Math.floor((px+SH)/period);
+    var bjBase=Math.floor((py+SH)/period);
+    var result=1e6;
+    for(var di=-1;di<=1;di++)for(var dj=-1;dj<=1;dj++){
+      var xm=xBase-di*period,ym=yBase-dj*period;
+      var bi=biBase+di,bj=bjBase+dj;
+      var cs=SDF.ckSign(bi,bj);
+      var pz=pz_in+bi*p.zRampX+bj*p.zRampY+cs*p.zChkStep;
+      result=SDF.smin(result,SDF.helicoidCell(xm,ym,pz,cs,p),p.hBlend);
+    }
+    return result;
+  },
+  braidCell:function(xm,ym,pz,cs,p){
+    var omega=p.bPitch;
+    if(p.bColHand&&cs<0)omega=-omega;
+    var dA2=p.bRadius*p.bRadius*omega*omega+1;
+    var result=-1e6;
+    for(var k=0;k<p.bN;k++){
+      var phase=SDF.TWO_PI*k/p.bN,tt=pz;
+      for(var iter=0;iter<5;iter++){
+        var phi=omega*tt+phase;
+        var Ckx=p.bRadius*Math.cos(phi),Cky=p.bRadius*Math.sin(phi);
+        var dCkx=-p.bRadius*omega*Math.sin(phi),dCky=p.bRadius*omega*Math.cos(phi);
+        var ddCkx=-p.bRadius*omega*omega*Math.cos(phi),ddCky=-p.bRadius*omega*omega*Math.sin(phi);
+        var dx=xm-Ckx,dy=ym-Cky,dz=pz-tt;
+        var f=-(dx*dCkx+dy*dCky+dz);
+        var fp=dA2-(dx*ddCkx+dy*ddCky);
+        tt-=f/(Math.abs(fp)>1e-6?fp:1e-6);
+      }
+      var phi2=omega*tt+phase;
+      var dist=Math.sqrt((xm-p.bRadius*Math.cos(phi2))*(xm-p.bRadius*Math.cos(phi2))+(ym-p.bRadius*Math.sin(phi2))*(ym-p.bRadius*Math.sin(phi2))+(pz-tt)*(pz-tt));
+      result=SDF.smax(result,p.bFiber-dist,p.bBlend);
+    }
+    return -result;
+  },
+  braid:function(px,py,pz_in,p){
+    var period=Math.max(2*(p.bRadius+p.bFiber)+p.bGap,0.01);
+    var hp=period*0.5,SH=Math.PI;
+    var xBase=((px+SH)%period+period)%period-hp;
+    var yBase=((py+SH)%period+period)%period-hp;
+    var biBase=Math.floor((px+SH)/period);
+    var bjBase=Math.floor((py+SH)/period);
+    var result=1e6;
+    for(var di=-1;di<=1;di++)for(var dj=-1;dj<=1;dj++){
+      var xm=xBase-di*period,ym=yBase-dj*period;
+      var bi=biBase+di,bj=bjBase+dj;
+      var cs=SDF.ckSign(bi,bj);
+      var pz=pz_in+bi*p.zRampX+bj*p.zRampY+cs*p.zChkStep;
+      result=SDF.smin(result,SDF.braidCell(xm,ym,pz,cs,p),p.bBlend);
+    }
+    return result;
+  },
+  weave:function(px,py,pz,p){
+    var period=Math.max(p.wvP,0.01),hp=period*0.5;
+    var zPeriod=Math.max(2*(p.wvA+p.wvR)+p.wvZGap,0.01),zHalfP=zPeriod*0.5;
+    var zmBase=((pz+zHalfP)%zPeriod+zPeriod)%zPeriod-zHalfP;
+    var xBase=((px+hp)%period+period)%period-hp;
+    var biBase=Math.floor((px+hp)/period);
+    var yBase=((py+hp)%period+period)%period-hp;
+    var bjBase=Math.floor((py+hp)/period);
+    var result=1e6;
+    for(var dzi=-1;dzi<=1;dzi++){
+      var zm=zmBase-dzi*zPeriod;
+      var warpD=1e6;
+      for(var di=-1;di<=1;di++){
+        var xm=xBase-di*period;
+        var bi=biBase+di;
+        var cs=(((bi%2)+2)%2===0)?1:-1;
+        var zc=cs*p.wvA*Math.cos(Math.PI*py/period);
+        warpD=Math.min(warpD,Math.sqrt(xm*xm+(zm-zc)*(zm-zc))-p.wvR);
+      }
+      var weftD=1e6;
+      for(var dj=-1;dj<=1;dj++){
+        var ym=yBase-dj*period;
+        var bj=bjBase+dj;
+        var cs2=(((bj%2)+2)%2===0)?1:-1;
+        var zc2=-cs2*p.wvA*Math.cos(Math.PI*px/period);
+        weftD=Math.min(weftD,Math.sqrt(ym*ym+(zm-zc2)*(zm-zc2))-p.wvR);
+      }
+      result=SDF.smin(result,SDF.smin(warpD,weftD,p.wvBlend),p.wvBlend);
+    }
+    return result;
+  },
+  raw:function(px,py,pz,p){
+    if(p.structure===0)return SDF.bundle(px,py,pz,p);
+    if(p.structure===1)return SDF.helicoid(px,py,pz,p);
+    if(p.structure===2)return SDF.braid(px,py,pz,p);
+    return SDF.weave(px,py,pz,p);
+  },
+  scene:function(px,py,pz,p){
+    var raw=SDF.raw(px,py,pz,p)-p.iso;
+    if(p.topoMode===0)return p.flip?-raw:raw;
+    return Math.abs(raw)-p.sheetW;
+  }
+};
+
+// SECTION VIEWER
+function SectionViewer(canvas){this.canvas=canvas;this.ctx=canvas.getContext('2d');this.params=null;this.axis='z';this.slice=0.5;this.res=128;}
+SectionViewer.prototype.update=function(p){this.params=p;this.render();};
+SectionViewer.prototype.setSlice=function(s){this.slice=s;this.render();};
+SectionViewer.prototype.setAxis=function(a){this.axis=a;this.render();};
+SectionViewer.prototype.setRes=function(r){this.res=r;this.render();};
+SectionViewer.prototype.render=function(){
+  var p=this.params;if(!p)return;
+  var CW=this.canvas.clientWidth,CH=this.canvas.clientHeight;
+  this.canvas.width=CW;this.canvas.height=CH;
+  var ctx=this.ctx,res=this.res,PI=3.14159265;
+  var sw=(this.slice*2-1)*PI,ax=this.axis;
+  var toW=function(ppx,ppy){
+    var nx2=(ppx/(res-1)*2-1)*PI,ny2=((res-1-ppy)/(res-1)*2-1)*PI;
+    if(ax==='z')return[nx2,ny2,sw];if(ax==='y')return[nx2,sw,ny2];return[sw,ny2,nx2];
+  };
+  var grid=new Float32Array(res*res);
+  for(var py=0;py<res;py++)for(var px=0;px<res;px++){var wc=toW(px,py);grid[px+py*res]=SDF.scene(wc[0],wc[1],wc[2],p);}
+  var img=ctx.createImageData(res,res);
+  for(var py=0;py<res;py++)for(var px=0;px<res;px++){
+    var val=grid[px+py*res],rr,gg,bb,tm;
+    if(val<0){tm=Math.min(Math.abs(val)*4,1);rr=Math.floor(80+tm*140);gg=Math.floor(45+tm*85);bb=Math.floor(5+tm*15);}
+    else{tm=Math.min(val*3,1);rr=Math.floor(6+tm*14);gg=Math.floor(8+tm*10);bb=Math.floor(15+tm*28);}
+    var pi=(px+py*res)*4;img.data[pi]=rr;img.data[pi+1]=gg;img.data[pi+2]=bb;img.data[pi+3]=255;
+  }
+  var tc=document.createElement('canvas');tc.width=res;tc.height=res;tc.getContext('2d').putImageData(img,0,0);
+  ctx.fillStyle='#06080f';ctx.fillRect(0,0,CW,CH);
+  var sz=Math.min(CW,CH)*0.92,ox=(CW-sz)*0.5,oy=(CH-sz)*0.5;
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(tc,ox,oy,sz,sz);
+  var cw=sz/res,ch=sz/res;
+  ctx.strokeStyle='#22d3ee';ctx.lineWidth=Math.max(1,sz/res*0.6);ctx.lineCap='square';ctx.beginPath();
+  for(var py=0;py<res;py++)for(var px=0;px<res;px++){
+    var v=grid[px+py*res];
+    if(py<res-1&&(v<0)!==(grid[px+(py+1)*res]<0)){ctx.moveTo(ox+px*cw,oy+(py+1)*ch);ctx.lineTo(ox+(px+1)*cw,oy+(py+1)*ch);}
+    if(px<res-1&&(v<0)!==(grid[(px+1)+py*res]<0)){ctx.moveTo(ox+(px+1)*cw,oy+py*ch);ctx.lineTo(ox+(px+1)*cw,oy+(py+1)*ch);}
+  }
+  ctx.stroke();
+};
+
+// RAYMARCHER
+function Raymarcher(canvas){
+  this.canvas=canvas;
+  var vp=canvas.parentElement;
+  canvas.width=Math.max(vp?vp.clientWidth:300,1);
+  canvas.height=Math.max(vp?vp.clientHeight:300,1);
+  this.gl=canvas.getContext('webgl2')||canvas.getContext('webgl');
+  if(!this.gl){document.getElementById('status').textContent='WebGL not supported';return;}
+  var gl=this.gl;
+  this._khr=gl.getExtension('KHR_parallel_shader_compile')||null;
+  this._pendingProg=null;this._compiling=false;this._rebuildPending=false;
+  this.prog=null;this.running=false;this._loopRunning=false;this._dirty=true;
+  this.currentParams=null;this.camZoom=14;this.autoRot=false;
+  this.rotMat=this._mat3Mul(this._rotAA(0,1,0,0.6),this._rotAA(1,0,0,0.45));
+  this.u={};
+  this.quadBuf=gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER,this.quadBuf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  this._setupInteraction();
+}
+Raymarcher.prototype._rotAA=function(ax,ay,az,angle){var c=Math.cos(angle),s=Math.sin(angle),t2=1-c,l=Math.sqrt(ax*ax+ay*ay+az*az)||1;ax/=l;ay/=l;az/=l;return[t2*ax*ax+c,t2*ax*ay+s*az,t2*ax*az-s*ay,t2*ax*ay-s*az,t2*ay*ay+c,t2*ay*az+s*ax,t2*ax*az+s*ay,t2*ay*az-s*ax,t2*az*az+c];};
+Raymarcher.prototype._mat3Mul=function(A,B){var r=new Array(9);for(var c=0;c<3;c++)for(var row=0;row<3;row++)r[c*3+row]=A[0*3+row]*B[c*3+0]+A[1*3+row]*B[c*3+1]+A[2*3+row]*B[c*3+2];return r;};
+Raymarcher.prototype._orthonorm=function(m){function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}function scl(a,s){return[a[0]*s,a[1]*s,a[2]*s];}function sub(a,b){return[a[0]-b[0],a[1]-b[1],a[2]-b[2]];}function nrm(a){var l=Math.sqrt(dot(a,a))||1;return[a[0]/l,a[1]/l,a[2]/l];}var x=[m[0],m[1],m[2]],y=[m[3],m[4],m[5]],z=[m[6],m[7],m[8]];x=nrm(x);y=nrm(sub(y,scl(x,dot(y,x))));z=nrm(sub(sub(z,scl(x,dot(z,x))),scl(y,dot(z,y))));return[x[0],x[1],x[2],y[0],y[1],y[2],z[0],z[1],z[2]];};
+Raymarcher.prototype._applyDelta=function(dx,dy){
+  if(Math.abs(dx)>0.001){
+    var ux=this.rotMat[3],uy=this.rotMat[4],uz=this.rotMat[5];
+    this.rotMat=this._mat3Mul(this._rotAA(ux,uy,uz,-dx*0.007),this.rotMat);
+    this._dirty=true;
+  }
+  if(Math.abs(dy)>0.001){
+    var rx=this.rotMat[0],ry=this.rotMat[1],rz=this.rotMat[2];
+    this.rotMat=this._mat3Mul(this._rotAA(rx,ry,rz,-dy*0.007),this.rotMat);
+    this._dirty=true;
+  }
+};
+Raymarcher.prototype._setupInteraction=function(){var self=this,drag=false,lx=0,ly=0;this.canvas.onmousedown=function(e){drag=true;lx=e.clientX;ly=e.clientY;self.autoRot=false;};window.addEventListener('mouseup',function(){drag=false;});window.addEventListener('mousemove',function(e){if(drag){self._applyDelta(e.clientX-lx,e.clientY-ly);lx=e.clientX;ly=e.clientY;}});this.canvas.addEventListener('touchstart',function(e){drag=true;lx=e.touches[0].clientX;ly=e.touches[0].clientY;self.autoRot=false;e.preventDefault();},{passive:false});window.addEventListener('touchend',function(){drag=false;});window.addEventListener('touchmove',function(e){if(drag){self._applyDelta(e.touches[0].clientX-lx,e.touches[0].clientY-ly);lx=e.touches[0].clientX;ly=e.touches[0].clientY;e.preventDefault();}},{passive:false});this.canvas.addEventListener('wheel',function(e){self.camZoom=Math.max(6,Math.min(38,self.camZoom+e.deltaY*0.02));self._dirty=true;e.preventDefault();},{passive:false});};
+
+Raymarcher.prototype._buildFrag=function(quality){
+  var iters=quality==='high'?380:quality==='medium'?220:110;
+  var lines=[
+  '#version 300 es',
+  'precision highp float;',
+  'out vec4 fragColor;',
+  'uniform vec2  uRes;',
+  'uniform mat3  uRot;',
+  'uniform float uZoom;',
+  'uniform float uStructure;',
+  'uniform float uR;',
+  'uniform float uN;',
+  'uniform float uD;',
+  'uniform float uNx;',
+  'uniform float uNy;',
+  'uniform float uGap;',
+  'uniform float uBlend;',
+  'uniform float uTwist;',
+  'uniform float uTwistMode;',
+  'uniform float uWarpMode;',
+  'uniform float uWarpAmp;',
+  'uniform float uWarpFreq;',
+  'uniform float uWarpFrame;',
+  'uniform float uHPitch;',
+  'uniform float uHThick;',
+  'uniform float uHInner;',
+  'uniform float uHOuter;',
+  'uniform float uHStarts;',
+  'uniform float uHColHand;',
+  'uniform float uHZHand;',
+  'uniform float uHGap;',
+  'uniform float uHBlend;',
+  'uniform float uBN;',
+  'uniform float uBRadius;',
+  'uniform float uBPitch;',
+  'uniform float uBFiber;',
+  'uniform float uBBlend;',
+  'uniform float uBColHand;',
+  'uniform float uBGap;',
+  'uniform float uZRampX;',
+  'uniform float uZRampY;',
+  'uniform float uZStepChk;',
+  'uniform float uTopoMode;',
+  'uniform float uFlip;',
+  'uniform float uIso;',
+  'uniform float uSheetW;',
+  'uniform float uWvR;',
+  'uniform float uWvP;',
+  'uniform float uWvA;',
+  'uniform float uWvBlend;',
+  'uniform float uWvZGap;',
+  'const float PI  = 3.14159265;',
+  'const float PI2 = 6.28318530;',
+
+  // ── smooth max (positive-inside union)
+  'float smax_k(float a, float b, float k) {',
+  '  if (k < 0.0001) return max(a, b);',
+  '  float h = max(k - abs(a-b), 0.0) / k;',
+  '  return max(a,b) + h*h*k*0.25;',
+  '}',
+
+  // ── smooth min (negative-inside union, inter-cell)
+  'float smin_k(float a, float b, float k) {',
+  '  if (k < 0.0001) return min(a, b);',
+  '  float h = max(k - abs(a-b), 0.0) / k;',
+  '  return min(a,b) - h*h*k*0.25;',
+  '}',
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ── BUNDLE
+  // ══════════════════════════════════════════════════════════════════════
+  'float beamSDF(vec2 p) {',
+  '  if (uN >= 14.0) return uR - max(abs(p.x), abs(p.y));',
+  '  if (uN <= 2.1)  return uR - length(p);',
+  '  return uR - pow(pow(abs(p.x),uN) + pow(abs(p.y),uN), 1.0/uN);',
+  '}',
+
+  'float bundleRaw(vec2 lp) {',
+  '  float W  = uNx * uD;',
+  '  float hp = W * 0.5;',
+  '  float result = -1e6;',
+  '  for (int j = 0; j < 4; j++) {',
+  '    if (float(j) >= uNy) break;',
+  '    for (int i = 0; i < 4; i++) {',
+  '      if (float(i) >= uNx) break;',
+  '      float x0 = (float(i) - (uNx-1.0)*0.5) * uD;',
+  '      float y0 = (float(j) - (uNy-1.0)*0.5) * uD;',
+  '      if (abs(x0)+uR <= hp && abs(y0)+uR <= hp)',
+  '        result = smax_k(result, beamSDF(lp - vec2(x0,y0)), uBlend);',
+  '    }',
+  '  }',
+  '  return result;',
+  '}',
+
+  'vec2 applyWarp(float xm, float ym, float z) {',
+  '  if (uWarpMode < 0.5) return vec2(xm, ym);',
+  '  float A = uWarpAmp;',
+  '  float w = uWarpFreq;',
+  '  if (uWarpMode < 1.5) {',
+  '    float cx = A * sin(w*z);',
+  '    float dC = A * w * cos(w*z);',
+  '    float L  = sqrt(1.0 + dC*dC);',
+  '    return vec2((xm-cx)/L, ym);',
+  '  }',
+  '  float cx = A * sin(w*z);',
+  '  float cy = A * cos(w*z);',
+  '  float L  = sqrt(1.0 + A*A*w*w);',
+  '  float u  = -(xm-cx)*sin(w*z) - (ym-cy)*cos(w*z);',
+  '  float v  = ((xm-cx)*cos(w*z) - (ym-cy)*sin(w*z)) / L;',
+  '  return vec2(u, v);',
+  '}',
+
+  // Single-cell bundle: returns standard SDF (negative inside material)
+  'float bundleCell(float xm, float ym, float pz, float cs) {',
+  '  float ts    = (uTwistMode < 0.5) ? 1.0 : cs;',
+  '  float theta = ts * uTwist * pz;',
+  '  float cosT  = cos(theta);',
+  '  float sinT  = sin(theta);',
+  '  vec2 luv;',
+  '  if (uWarpFrame < 0.5) {',
+  '    vec2 wv = applyWarp(xm, ym, pz);',
+  '    luv = vec2(wv.x*cosT - wv.y*sinT, wv.x*sinT + wv.y*cosT);',
+  '  } else {',
+  '    float tx = xm*cosT - ym*sinT;',
+  '    float ty = xm*sinT + ym*cosT;',
+  '    luv = applyWarp(tx, ty, pz);',
+  '  }',
+  '  return -bundleRaw(luv);',
+  '}',
+
+  // 3x3 neighbor union
+  'float bundleColSDF(vec3 p) {',
+  '  float period = max(uNx*uD + uGap, 0.01);',
+  '  float hp     = period * 0.5;',
+  '  float xBase  = mod(p.x + PI, period) - hp;',
+  '  float yBase  = mod(p.y + PI, period) - hp;',
+  '  float biBase = floor((p.x + PI) / period);',
+  '  float bjBase = floor((p.y + PI) / period);',
+  '  float result = 1e6;',
+  '  for (int di = -1; di <= 1; di++) {',
+  '    for (int dj = -1; dj <= 1; dj++) {',
+  '      float xm = xBase - float(di) * period;',
+  '      float ym = yBase - float(dj) * period;',
+  '      float bi = biBase + float(di);',
+  '      float bj = bjBase + float(dj);',
+  '      float cs = mod(bi+bj, 2.0) < 0.5 ? 1.0 : -1.0;',
+  '      float pz = p.z + bi*uZRampX + bj*uZRampY + cs*uZStepChk;',
+  '      result = smin_k(result, bundleCell(xm, ym, pz, cs), uBlend);',
+  '    }',
+  '  }',
+  '  return result;',
+  '}',
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ── HELICOID
+  // ══════════════════════════════════════════════════════════════════════
+  // Single-cell helicoid: standard SDF (negative inside sheet)
+  'float helicoidCell(float xm, float ym, float pz, float cs) {',
+  '  float omega = uHPitch;',
+  '  if (uHColHand > 0.5 && cs < 0.0) omega = -omega;',
+  '  float twAng  = omega * pz;',
+  '  float twRate = omega;',
+  '  if (uHZHand > 0.5) {',
+  '    float hk = abs(omega) * 0.5;',
+  '    twRate = omega * cos(hk * pz);',
+  '    twAng  = (hk > 1e-6 ? omega / hk : omega * pz) * sin(hk * pz);',
+  '  }',
+  '  float rxy   = length(vec2(xm, ym));',
+  '  float rMask = min(rxy - uHInner, uHOuter - rxy);',
+  '  float phi   = uHStarts * atan(ym, xm) - twAng;',
+  '  float phiW  = phi - PI2 * floor((phi + PI) / PI2);',
+  '  float rSafe = max(rxy, 0.0001);',
+  '  float gMag  = sqrt(uHStarts*uHStarts / (rSafe*rSafe) + twRate*twRate);',
+  '  float dSurf = abs(phiW) / gMag - uHThick;',
+  '  return max(dSurf, -rMask);',
+  '}',
+
+  // 3x3 neighbor union
+  'float helicoidColSDF(vec3 p) {',
+  '  float period = max(2.0*uHOuter + uHGap, 0.01);',
+  '  float hp     = period * 0.5;',
+  '  float xBase  = mod(p.x + PI, period) - hp;',
+  '  float yBase  = mod(p.y + PI, period) - hp;',
+  '  float biBase = floor((p.x + PI) / period);',
+  '  float bjBase = floor((p.y + PI) / period);',
+  '  float result = 1e6;',
+  '  for (int di = -1; di <= 1; di++) {',
+  '    for (int dj = -1; dj <= 1; dj++) {',
+  '      float xm = xBase - float(di) * period;',
+  '      float ym = yBase - float(dj) * period;',
+  '      float bi = biBase + float(di);',
+  '      float bj = bjBase + float(dj);',
+  '      float cs = mod(bi+bj, 2.0) < 0.5 ? 1.0 : -1.0;',
+  '      float pz = p.z + bi*uZRampX + bj*uZRampY + cs*uZStepChk;',
+  '      result = smin_k(result, helicoidCell(xm, ym, pz, cs), uHBlend);',
+  '    }',
+  '  }',
+  '  return result;',
+  '}',
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ── BRAID
+  // ══════════════════════════════════════════════════════════════════════
+  // Single-cell braid: NR nearest point on each helical strand.
+  'float braidCell(float xm, float ym, float pz, float cs) {',
+  '  float omega = uBPitch;',
+  '  if (uBColHand > 0.5 && cs < 0.0) omega = -omega;',
+  '  float dA2    = uBRadius*uBRadius*omega*omega + 1.0;',
+  '  float result = -1e6;',
+  '  int N = int(uBN);',
+  '  for (int k = 0; k < 4; k++) {',
+  '    if (k >= N) break;',
+  '    float phase = PI2 * float(k) / uBN;',
+  '    float t     = pz;',
+  '    for (int iter = 0; iter < 5; iter++) {',
+  '      float phi   = omega*t + phase;',
+  '      float Ckx   =  uBRadius * cos(phi);',
+  '      float Cky   =  uBRadius * sin(phi);',
+  '      float dCkx  = -uBRadius * omega * sin(phi);',
+  '      float dCky  =  uBRadius * omega * cos(phi);',
+  '      float ddCkx = -uBRadius * omega*omega * cos(phi);',
+  '      float ddCky = -uBRadius * omega*omega * sin(phi);',
+  '      float dx    = xm - Ckx;',
+  '      float dy    = ym - Cky;',
+  '      float dz    = pz - t;',
+  '      float f     = -(dx*dCkx + dy*dCky + dz);',
+  '      float fp    = dA2 - (dx*ddCkx + dy*ddCky);',
+  '      float safe  = abs(fp) > 0.000001 ? fp : 0.000001;',
+  '      t -= f / safe;',
+  '    }',
+  '    float phi2  = omega*t + phase;',
+  '    vec3  Ck    = vec3(uBRadius*cos(phi2), uBRadius*sin(phi2), t);',
+  '    float strand = uBFiber - length(vec3(xm, ym, pz) - Ck);',
+  '    result = smax_k(result, strand, uBBlend);',
+  '  }',
+  '  return -result;',
+  '}',
+
+  // 3x3 neighbor union
+  'float braidColSDF(vec3 p) {',
+  '  float period = max(2.0*(uBRadius + uBFiber) + uBGap, 0.01);',
+  '  float hp     = period * 0.5;',
+  '  float xBase  = mod(p.x + PI, period) - hp;',
+  '  float yBase  = mod(p.y + PI, period) - hp;',
+  '  float biBase = floor((p.x + PI) / period);',
+  '  float bjBase = floor((p.y + PI) / period);',
+  '  float result = 1e6;',
+  '  for (int di = -1; di <= 1; di++) {',
+  '    for (int dj = -1; dj <= 1; dj++) {',
+  '      float xm = xBase - float(di) * period;',
+  '      float ym = yBase - float(dj) * period;',
+  '      float bi = biBase + float(di);',
+  '      float bj = bjBase + float(dj);',
+  '      float cs = mod(bi+bj, 2.0) < 0.5 ? 1.0 : -1.0;',
+  '      float pz = p.z + bi*uZRampX + bj*uZRampY + cs*uZStepChk;',
+  '      result = smin_k(result, braidCell(xm, ym, pz, cs), uBBlend);',
+  '    }',
+  '  }',
+  '  return result;',
+  '}',
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ── WEAVE
+  // ══════════════════════════════════════════════════════════════════════
+  'float weaveSDF(vec3 p) {',
+  '  float period  = max(uWvP, 0.01);',
+  '  float hp      = period * 0.5;',
+  '  float zPeriod = max(2.0*(uWvA + uWvR) + uWvZGap, 0.01);',
+  '  float zHalfP  = zPeriod * 0.5;',
+  '  float zmBase  = mod(p.z + zHalfP, zPeriod) - zHalfP;',
+  '  float xBase   = mod(p.x + hp, period) - hp;',
+  '  float biBase  = floor((p.x + hp) / period);',
+  '  float yBase   = mod(p.y + hp, period) - hp;',
+  '  float bjBase  = floor((p.y + hp) / period);',
+  '  float result  = 1e6;',
+  '  for (int dzi = -1; dzi <= 1; dzi++) {',
+  '    float zm = zmBase - float(dzi) * zPeriod;',
+  '    float warpD = 1e6;',
+  '    for (int di = -1; di <= 1; di++) {',
+  '      float xm = xBase - float(di) * period;',
+  '      float bi = biBase + float(di);',
+  '      float cs = mod(bi, 2.0) < 0.5 ? 1.0 : -1.0;',
+  '      float zc = cs * uWvA * cos(PI * p.y / period);',
+  '      warpD = min(warpD, sqrt(xm*xm + (zm-zc)*(zm-zc)) - uWvR);',
+  '    }',
+  '    float weftD = 1e6;',
+  '    for (int dj = -1; dj <= 1; dj++) {',
+  '      float ym  = yBase - float(dj) * period;',
+  '      float bj  = bjBase + float(dj);',
+  '      float cs2 = mod(bj, 2.0) < 0.5 ? 1.0 : -1.0;',
+  '      float zc2 = -cs2 * uWvA * cos(PI * p.x / period);',
+  '      weftD = min(weftD, sqrt(ym*ym + (zm-zc2)*(zm-zc2)) - uWvR);',
+  '    }',
+  '    result = smin_k(result, smin_k(warpD, weftD, uWvBlend), uWvBlend);',
+  '  }',
+  '  return result;',
+  '}',
+
+  // ══════════════════════════════════════════════════════════════════════
+  // ── DISPATCH + TOPOLOGY
+  // ══════════════════════════════════════════════════════════════════════
+  'float ihbSDF(vec3 p) {',
+  '  if (uStructure < 0.5) return bundleColSDF(p);',
+  '  if (uStructure < 1.5) return helicoidColSDF(p);',
+  '  if (uStructure < 2.5) return braidColSDF(p);',
+  '  return weaveSDF(p);',
+  '}',
+
+  'float sceneSDF(vec3 p) {',
+  '  float raw = ihbSDF(p) - uIso;',
+  '  if (uTopoMode < 0.5) return uFlip < 0.5 ? raw : -raw;',
+  '  return abs(raw) - uSheetW;',
+  '}',
+
+  'vec3 nrmScene(vec3 p, float e) {',
+  '  float dx = sceneSDF(p+vec3(e,0,0)) - sceneSDF(p-vec3(e,0,0));',
+  '  float dy = sceneSDF(p+vec3(0,e,0)) - sceneSDF(p-vec3(0,e,0));',
+  '  float dz = sceneSDF(p+vec3(0,0,e)) - sceneSDF(p-vec3(0,0,e));',
+  '  return normalize(vec3(dx,dy,dz));',
+  '}',
+
+  'vec3 boxNrm(vec3 pos, float H) {',
+  '  vec3 ap = abs(pos)/H;',
+  '  if (ap.x>ap.y && ap.x>ap.z) return vec3(sign(pos.x),0.0,0.0);',
+  '  if (ap.y>ap.z)               return vec3(0.0,sign(pos.y),0.0);',
+  '  return vec3(0.0,0.0,sign(pos.z));',
+  '}',
+
+  'vec3 palette(float tt) {',
+  '  vec3 a = vec3(0.55,0.52,0.45);',
+  '  vec3 b = vec3(0.40,0.35,0.28);',
+  '  vec3 c = vec3(1.0, 1.0, 1.0);',
+  '  vec3 d = vec3(0.05,0.02,0.08);',
+  '  return clamp(a + b*cos(6.28318*(c*tt+d)), 0.0, 1.0);',
+  '}',
+
+  'void main() {',
+  '  vec2 uv  = (gl_FragCoord.xy - uRes*0.5) / min(uRes.x, uRes.y);',
+  '  vec3 ro  = uRot * vec3(0.0, 0.0, uZoom);',
+  '  vec3 rd  = normalize(uRot * vec3(uv.x, uv.y, -1.6));',
+  '  float H  = PI;',
+  '  float r2 = clamp(length(uv)*1.1, 0.0, 1.0);',
+  '  vec3 bgCol = mix(vec3(0.07,0.07,0.09), vec3(0.03,0.03,0.04), r2*r2);',
+  '  vec3 iv  = vec3(1.0) / rd;',
+  '  vec3 tb  = (-vec3(H) - ro) * iv;',
+  '  vec3 tt2 = ( vec3(H) - ro) * iv;',
+  '  vec3 tmi = min(tb, tt2);',
+  '  vec3 tma = max(tb, tt2);',
+  '  float tEn = max(max(tmi.x,tmi.y),tmi.z);',
+  '  float tEx = min(min(tma.x,tma.y),tma.z);',
+  '  if (tEn > tEx || tEx < 0.0) { fragColor = vec4(bgCol,1.0); return; }',
+  '  float t = max(tEn, 0.001);',
+  '  bool hit     = false;',
+  '  bool nearCap = false;',
+  '  if (sceneSDF(ro + rd*t) < 0.0) nearCap = true;',
+  '  if (!nearCap) {',
+  '    for (int i = 0; i < ITERS; i++) {',
+  '      if (t > tEx) break;',
+  '      vec3 mp = ro + rd*t;',
+  '      float d = sceneSDF(mp);',
+  '      if (d < 0.003) { hit = true; break; }',
+  '      t += clamp(d/2.5, 0.0015, 0.35);',
+  '    }',
+  '  }',
+  '  vec3 pos = vec3(0.0);',
+  '  vec3 n   = vec3(0.0, 1.0, 0.0);',
+  '  if (nearCap) {',
+  '    pos = ro + rd*tEn;',
+  '    n   = boxNrm(pos, H);',
+  '    if (dot(n,-rd) < 0.0) n = -n;',
+  '    t = tEn;',
+  '  } else if (hit) {',
+  '    pos = ro + rd*t;',
+  '    n   = nrmScene(pos, 0.005);',
+  '    if (dot(n,-rd) < 0.0) n = -n;',
+  '  } else {',
+  '    if (sceneSDF(ro + rd*tEx) < 0.0) {',
+  '      pos = ro + rd*tEx;',
+  '      n   = boxNrm(pos, H);',
+  '      if (dot(n,-rd) < 0.0) n = -n;',
+  '      t = tEx;',
+  '    } else { fragColor = vec4(bgCol,1.0); return; }',
+  '  }',
+  '  float ndy  = dot(n, vec3(0.0,1.0,0.0));',
+  '  float ndz  = dot(n, vec3(0.0,0.0,1.0));',
+  '  vec3  irid = palette(ndy*ndy*0.30 + ndz*ndz*0.70);',
+  '  vec3  l1   = normalize(vec3( 1.0, 1.8, 2.0));',
+  '  vec3  l2   = normalize(vec3(-0.8,-0.3, 0.6));',
+  '  vec3  l3   = normalize(vec3(-0.5,-1.0,-1.5));',
+  '  float diff = 0.32 + max(dot(n,l1),0.0)*0.72 + max(dot(n,l2),0.0)*0.22 + max(dot(n,l3),0.0)*0.28;',
+  '  float spec = pow(max(dot(reflect(-l1,n),-rd),0.0),110.0)*0.75;',
+  '  float rim  = pow(1.0 - max(dot(n,-rd),0.0), 2.8)*0.85;',
+  '  vec3  col  = irid*diff + vec3(1.0)*spec + vec3(0.48,0.31,0.62)*rim*0.5;',
+  '  col = mix(bgCol, col, exp(-t*0.008));',
+  '  fragColor = vec4(clamp(col,0.0,1.0),1.0);',
+  '}'
+  ];
+  return lines.join('\n').replace('ITERS',''+iters);
+};
+
+Raymarcher.prototype._mkShader=function(type,src){var gl=this.gl,s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error('Shader error:',gl.getShaderInfoLog(s));return s;};
+Raymarcher.prototype._submitShader=function(quality){var gl=this.gl,vs=this._mkShader(gl.VERTEX_SHADER,'#version 300 es\nin vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}'),fs=this._mkShader(gl.FRAGMENT_SHADER,this._buildFrag(quality)),prg=gl.createProgram();gl.attachShader(prg,vs);gl.attachShader(prg,fs);gl.linkProgram(prg);gl.deleteShader(vs);gl.deleteShader(fs);if(this._pendingProg)gl.deleteProgram(this._pendingProg);this._pendingProg=prg;this._compiling=true;setShaderStatus(true);};
+Raymarcher.prototype._activateProg=function(prg){var gl=this.gl;if(this.prog&&this.prog!==prg)gl.deleteProgram(this.prog);this.prog=prg;gl.useProgram(prg);gl.bindBuffer(gl.ARRAY_BUFFER,this.quadBuf);var loc=gl.getAttribLocation(prg,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);var u=this.u,g=function(n){return gl.getUniformLocation(prg,n);};u.res=g('uRes');u.rot=g('uRot');u.zoom=g('uZoom');u.Str=g('uStructure');u.R=g('uR');u.N=g('uN');u.D=g('uD');u.Nx=g('uNx');u.Ny=g('uNy');u.Gap=g('uGap');u.Blend=g('uBlend');u.Twist=g('uTwist');u.TwistMode=g('uTwistMode');u.WarpMode=g('uWarpMode');u.WarpAmp=g('uWarpAmp');u.WarpFreq=g('uWarpFreq');u.WarpFrame=g('uWarpFrame');u.HPitch=g('uHPitch');u.HThick=g('uHThick');u.HInner=g('uHInner');u.HOuter=g('uHOuter');u.HStarts=g('uHStarts');u.HColHand=g('uHColHand');u.HZHand=g('uHZHand');u.HGap=g('uHGap');u.HBlend=g('uHBlend');u.BN=g('uBN');u.BRadius=g('uBRadius');u.BPitch=g('uBPitch');u.BFiber=g('uBFiber');u.BBlend=g('uBBlend');u.BColHand=g('uBColHand');u.BGap=g('uBGap');u.ZRampX=g('uZRampX');u.ZRampY=g('uZRampY');u.ZStepChk=g('uZStepChk');u.TopoMode=g('uTopoMode');u.Flip=g('uFlip');u.Iso=g('uIso');u.SheetW=g('uSheetW');u.WvR=g('uWvR');u.WvP=g('uWvP');u.WvA=g('uWvA');u.WvBlend=g('uWvBlend');u.WvZGap=g('uWvZGap');};
+Raymarcher.prototype.setParams=function(params){if(!this.gl)return;var prev=this.currentParams,needRebuild=!prev||!this.prog||params.quality!==(prev?prev.quality:null);this.currentParams=params;if(needRebuild){if(this.running)this._submitShader(params.quality);else this._rebuildPending=true;}this._dirty=true;if(!this._loopRunning)this._startLoop();};
+Raymarcher.prototype.render=function(){var gl=this.gl;if(!gl)return;if(this._compiling&&this._pendingProg){var ready=true;if(this._khr)ready=gl.getProgramParameter(this._pendingProg,this._khr.COMPLETION_STATUS_KHR);if(ready){if(gl.getProgramParameter(this._pendingProg,gl.LINK_STATUS)){this._activateProg(this._pendingProg);setShaderStatus(false);}else{console.error('Link failed:',gl.getProgramInfoLog(this._pendingProg));gl.deleteProgram(this._pendingProg);setShaderStatus(false);}this._pendingProg=null;this._compiling=false;this._dirty=true;}}if(!this.prog)return;var cw=this.canvas.clientWidth,ch=this.canvas.clientHeight;if(cw===0||ch===0)return;var dpr=Math.min(window.devicePixelRatio||1,1.5),w=Math.round(cw*dpr),h=Math.round(ch*dpr);if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}gl.viewport(0,0,w,h);gl.useProgram(this.prog);var u=this.u,p=this.currentParams;gl.uniform2f(u.res,w,h);gl.uniformMatrix3fv(u.rot,false,new Float32Array(this.rotMat));gl.uniform1f(u.zoom,this.camZoom);if(p){gl.uniform1f(u.Str,p.structure);gl.uniform1f(u.R,p.r);gl.uniform1f(u.N,p.n);gl.uniform1f(u.D,p.d);gl.uniform1f(u.Nx,p.nx);gl.uniform1f(u.Ny,p.ny);gl.uniform1f(u.Gap,p.gap);gl.uniform1f(u.Blend,p.blend);gl.uniform1f(u.Twist,p.twist);gl.uniform1f(u.TwistMode,p.twistMode);gl.uniform1f(u.WarpMode,p.warpMode);gl.uniform1f(u.WarpAmp,p.warpAmp);gl.uniform1f(u.WarpFreq,p.warpFreq);gl.uniform1f(u.WarpFrame,p.warpFrame);gl.uniform1f(u.HPitch,p.hPitch);gl.uniform1f(u.HThick,p.hThick);gl.uniform1f(u.HInner,p.hInner);gl.uniform1f(u.HOuter,p.hOuter);gl.uniform1f(u.HStarts,p.hStarts);gl.uniform1f(u.HColHand,p.hColHand);gl.uniform1f(u.HZHand,p.hZHand);gl.uniform1f(u.HGap,p.hGap);gl.uniform1f(u.HBlend,p.hBlend);gl.uniform1f(u.BN,p.bN);gl.uniform1f(u.BRadius,p.bRadius);gl.uniform1f(u.BPitch,p.bPitch);gl.uniform1f(u.BFiber,p.bFiber);gl.uniform1f(u.BBlend,p.bBlend);gl.uniform1f(u.BColHand,p.bColHand);gl.uniform1f(u.BGap,p.bGap);gl.uniform1f(u.ZRampX,p.zRampX);gl.uniform1f(u.ZRampY,p.zRampY);gl.uniform1f(u.ZStepChk,p.zChkStep);gl.uniform1f(u.TopoMode,p.topoMode);gl.uniform1f(u.Flip,p.flip);gl.uniform1f(u.Iso,p.iso);gl.uniform1f(u.SheetW,p.sheetW);gl.uniform1f(u.WvR,p.wvR);gl.uniform1f(u.WvP,p.wvP);gl.uniform1f(u.WvA,p.wvA);gl.uniform1f(u.WvBlend,p.wvBlend);gl.uniform1f(u.WvZGap,p.wvZGap);}gl.drawArrays(gl.TRIANGLE_STRIP,0,4);drawAxisGizmo(this.rotMat,this.canvas.clientWidth,this.canvas.clientHeight,this.camZoom);this._dirty=false;};
+Raymarcher.prototype._startLoop=function(){var self=this;self._loopRunning=true;var lastTs=0;function loop(ts){var dt=Math.min((ts-lastTs)/1000,0.05);lastTs=ts;if(self.running){if(self.autoRot){self._applyDelta(dt*25,0);self._dirty=true;}if(self._dirty||self._compiling){self.rotMat=self._orthonorm(self.rotMat);self.render();}}requestAnimationFrame(loop);}requestAnimationFrame(loop);};
+
+document.getElementById('glCanvas').addEventListener('webglcontextlost',function(e){e.preventDefault();rm.running=false;document.getElementById('status').textContent='GPU reset';document.getElementById('status').style.color='#ef4444';});
+window.addEventListener('beforeunload',function(){if(rm&&rm.gl){if(rm._pendingProg)rm.gl.deleteProgram(rm._pendingProg);if(rm.prog)rm.gl.deleteProgram(rm.prog);}});
+
+function setShaderStatus(c){var dot=document.getElementById('dotShader'),lbl=document.getElementById('labelShader');if(c){dot.style.background='#facc15';lbl.textContent='compiling...';lbl.style.color='#facc15';}else{dot.style.background='#22d3ee';lbl.textContent='ready';lbl.style.color='#22d3ee';}}
+function showIndicators(show){document.getElementById('indicators').style.display=show?'flex':'none';document.getElementById('qualityOverlay').style.display=show?'flex':'none';}
+
+
+// ── Axis gizmo ────────────────────────────────────────────────────────────
+
+// ── Axis labels on cube edges ─────────────────────────────────────────────
+function drawAxisGizmo(rotMat,canvasW,canvasH,camZoom){
+  var cv=document.getElementById('axisCanvas');
+  if(!cv||cv.style.display==='none')return;
+  var dpr=Math.min(window.devicePixelRatio||1,2);
+  cv.width=Math.round(canvasW*dpr);cv.height=Math.round(canvasH*dpr);
+  var ctx=cv.getContext('2d');
+  ctx.scale(dpr,dpr);ctx.clearRect(0,0,canvasW,canvasH);
+  var H=Math.PI;
+  // Camera sits at rotMat*(0,0,zoom) so its world position direction = col 2 of rotMat
+  var cx=rotMat[6],cy=rotMat[7],cz=rotMat[8];
+  function proj(p){
+    var tx=rotMat[0]*p[0]+rotMat[1]*p[1]+rotMat[2]*p[2];
+    var ty=rotMat[3]*p[0]+rotMat[4]*p[1]+rotMat[5]*p[2];
+    var tz=rotMat[6]*p[0]+rotMat[7]*p[1]+rotMat[8]*p[2];
+    var pcz=tz-camZoom;if(pcz>-0.1)return null;
+    var s=Math.min(canvasW,canvasH);
+    return[canvasW/2+(-1.6*tx/pcz)*s,canvasH/2-(-1.6*ty/pcz)*s];
+  }
+  // Each label is on an edge shared by two faces.
+  // vis = max dot-product of both adjacent face normals with camera direction.
+  // Positive = face points toward camera. Fade label in/out on this value.
+  // X label at (0, +H, -H): adjacent faces y=+H (normal 0,1,0) and z=-H (normal 0,0,-1)
+  // Y label at (-H, 0, -H): adjacent faces x=-H (normal -1,0,0) and z=-H (normal 0,0,-1)
+  // Z label at (-H, +H, 0): adjacent faces x=-H (normal -1,0,0) and y=+H (normal 0,1,0)
+  var axes=[
+    {p:[0,H,-H],  color:'#22d3ee',label:'X', vis:Math.max(cy,-cz)},
+    {p:[-H,0,-H], color:'#e879f9',label:'Y', vis:Math.max(-cx,-cz)},
+    {p:[-H,H,0],  color:'#facc15',label:'Z', vis:Math.max(-cx,cy)}
+  ];
+  ctx.font='bold 13px system-ui,sans-serif';
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  axes.forEach(function(ax){
+    var alpha=Math.min(1,Math.max(0,ax.vis*4));
+    if(alpha<0.01)return;
+    var s=proj(ax.p);if(!s)return;
+    var m=16;
+    s[0]=Math.max(m,Math.min(canvasW-m,s[0]));
+    s[1]=Math.max(m,Math.min(canvasH-m,s[1]));
+    ctx.globalAlpha=alpha*0.7;ctx.fillStyle='rgba(0,0,0,1)';
+    ctx.fillText(ax.label,s[0]+1,s[1]+1);
+    ctx.globalAlpha=alpha;ctx.fillStyle=ax.color;
+    ctx.fillText(ax.label,s[0],s[1]);
+    ctx.globalAlpha=1;
+  });
+}
+
+var rm=new Raymarcher(document.getElementById('glCanvas'));
+var sv=new SectionViewer(document.getElementById('sectionCanvas'));
+
+function regenerate(){clearTimeout(debounceTimer);debounceTimer=setTimeout(function(){var p=getParams();if(currentView==='sheet'){rm.setParams(p);}else{document.getElementById('status').textContent='Rendering...';setTimeout(function(){var t0=performance.now();sv.update(p);document.getElementById('status').textContent='Done in '+(performance.now()-t0).toFixed(0)+'ms | period='+getPeriod(p).toFixed(3);},20);}},currentView==='sheet'?50:80);}
+
+function onP(input,dispId,decimals){var val=parseFloat(input.value),dec=decimals===0?0:(decimals||3);document.getElementById(dispId).textContent=val.toFixed(dec);regenerate();}
+function onView(mode){currentView=mode;var isSec=mode==='section';document.getElementById('btnViewSheet').classList.toggle('active',!isSec);document.getElementById('btnViewSection').classList.toggle('active',isSec);document.getElementById('sliceCtrl').style.display=isSec?'flex':'none';document.getElementById('glCanvas').style.display=isSec?'none':'block';document.getElementById('sectionCanvas').style.display=isSec?'block':'none';document.getElementById('axisCanvas').style.display=isSec?'none':'block';if(isSec){rm.running=false;showIndicators(false);regenerate();}else{showIndicators(true);rm.running=true;if(rm._rebuildPending){rm._rebuildPending=false;rm._submitShader(currentQuality);}else rm.setParams(getParams());}}
+function onAxis(a){currentAxis=a;['z','y','x'].forEach(function(ax){document.getElementById('btnAxis'+ax.toUpperCase()).classList.toggle('active',ax===a);});sv.setAxis(a);regenerate();}
+function onSlice(input){slicePos=parseFloat(input.value);document.getElementById('sliceVal').textContent=slicePos.toFixed(2);sv.setSlice(slicePos);}
+function onRes(r){currentRes=r;[64,128,256].forEach(function(v){document.getElementById('btnR'+v).classList.toggle('active',v===r);});sv.setRes(r);regenerate();}
+function onQuality(q){currentQuality=q;['low','medium','high'].forEach(function(v){document.getElementById('btnQ'+({low:'Low',medium:'Med',high:'High'}[v])).classList.toggle('active',v===q);});if(currentView==='sheet')regenerate();}
+function onStructure(){structure=parseInt(document.getElementById('structure').value);document.getElementById('blockBundle').style.display=structure===0?'block':'none';document.getElementById('blockHelicoid').style.display=structure===1?'block':'none';document.getElementById('blockBraid').style.display=structure===2?'block':'none';document.getElementById('blockWeave').style.display=structure===3?'block':'none';document.getElementById('zStepBlock').style.display=structure===3?'none':'block';regenerate();}
+function onShape(s){beamShape=s;['Circle','Rounded','Square'].forEach(function(n){document.getElementById('btnShape'+n).classList.toggle('active',n.toLowerCase()===s);});regenerate();}
+function onTwistMode(m){twistMode=m;document.getElementById('btnTwistU').classList.toggle('active',m===0);document.getElementById('btnTwistC').classList.toggle('active',m===1);regenerate();}
+function onWarpMode(m){warpMode=m;['Off','X','XY'].forEach(function(n,i){document.getElementById('btnWarp'+n).classList.toggle('active',i===m);});document.getElementById('warpSliders').classList.toggle('row-disabled',m===0);regenerate();}
+function onWarpFrame(f){warpFrame=f;document.getElementById('btnFrameW').classList.toggle('active',f===0);document.getElementById('btnFrameF').classList.toggle('active',f===1);regenerate();}
+function onHStarts(n){hStarts=n;[1,2,3].forEach(function(v){document.getElementById('btnHS'+v).classList.toggle('active',v===n);});regenerate();}
+function onHColHand(){hColHand=hColHand?0:1;document.getElementById('btnHColHand').classList.toggle('on',hColHand===1);regenerate();}
+function onHZHand(){hZHand=hZHand?0:1;document.getElementById('btnHZHand').classList.toggle('on',hZHand===1);regenerate();}
+function onBraidN(n){bN=n;[2,3,4].forEach(function(v){document.getElementById('btnBN'+v).classList.toggle('active',v===n);});regenerate();}
+function onBColHand(){bColHand=bColHand?0:1;document.getElementById('btnBColHand').classList.toggle('on',bColHand===1);regenerate();}
+function onTopoMode(m){topoMode=m;document.getElementById('btnTopoHalf').classList.toggle('active',m===0);document.getElementById('btnTopoSheet').classList.toggle('active',m===1);document.getElementById('sheetWidthRow').style.display=m===1?'flex':'none';document.getElementById('flipRow').style.display=m===0?'flex':'none';regenerate();}
+function onTopoFlip(){topoFlip=topoFlip?0:1;document.getElementById('flipGlyph').style.transform=topoFlip?'rotate(180deg)':'';document.getElementById('btnFlip').style.color=topoFlip?'#e879f9':'#22d3ee';document.getElementById('btnFlip').style.borderColor=topoFlip?'#e879f9':'#22d3ee';regenerate();}
+
+
+// ── Stiffness ellipsoid ───────────────────────────────────────────────────
+function smat3Mul(A,B){var r=new Array(9);for(var c=0;c<3;c++)for(var row=0;row<3;row++)r[c*3+row]=A[0*3+row]*B[c*3+0]+A[1*3+row]*B[c*3+1]+A[2*3+row]*B[c*3+2];return r;}
+function sRotAxisAngle(ax,ay,az,angle){var c=Math.cos(angle),s=Math.sin(angle),t2=1-c,l=Math.sqrt(ax*ax+ay*ay+az*az)||1;ax/=l;ay/=l;az/=l;return[t2*ax*ax+c,t2*ax*ay+s*az,t2*ax*az-s*ay,t2*ax*ay-s*az,t2*ay*ay+c,t2*ay*az+s*ax,t2*ax*az+s*ay,t2*ay*az-s*ax,t2*az*az+c];}
+function sOrthonorm(m){function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}function scl(a,s){return[a[0]*s,a[1]*s,a[2]*s];}function sub(a,b){return[a[0]-b[0],a[1]-b[1],a[2]-b[2]];}function nrm(a){var l=Math.sqrt(dot(a,a))||1;return[a[0]/l,a[1]/l,a[2]/l];}var x=[m[0],m[1],m[2]],y=[m[3],m[4],m[5]],z=[m[6],m[7],m[8]];x=nrm(x);y=nrm(sub(y,scl(x,dot(y,x))));z=nrm(sub(sub(z,scl(x,dot(z,x))),scl(y,dot(z,y))));return[x[0],x[1],x[2],y[0],y[1],y[2],z[0],z[1],z[2]];}
+
+var sgl=null,sprog=null,squadBuf=null,suRes,suRot,suZoom;
+var sRotMat=[1,0,0,0,1,0,0,0,1];
+var sInitialized=false,sZoom=2.6;
+var SVERT='attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}';
+
+function buildStiffFrag(Ex,Ey,Ez,Gxy,nu){
+  var E=(Ex+Ey+Ez)/3;
+  var S11=1/E,S12=-nu/E,S44=1/Gxy;
+  var d=(S11-S12)*(S11+2*S12);
+  var C11=(S11+S12)/d,C12=-S12/d,C44=1/S44;
+  var A=2*C44/(C11-C12);
+  var Gamma=2*S11-2*S12-S44;
+  var E100=1/S11;
+  var E111=Math.abs(S11-Gamma/3)>1e-9?1/(S11-Gamma/3):E100;
+  var Emax=Math.max(E100,E111,Ex,Ey,Ez)*1.08;
+  var zv=document.getElementById('zener-val');
+  var zm=document.getElementById('zener-marker');
+  var zl=document.getElementById('zener-label');
+  if(zv){zv.textContent=A.toFixed(3);}
+  if(zm){var Aclamp=Math.min(Math.max(A,0.3),2.5);zm.style.left=((Aclamp-0.3)/(2.5-0.3)*100).toFixed(1)+'%';}
+  var Acol=A<0.8?'#e879f9':A<1.2?'#888':A<2.0?'#22d3ee':'#aaff00';
+  var Albl=A<0.7?'strongly axial':A<0.9?'axial dominant':A<1.1?'near-isotropic':A<1.5?'diagonal dominant':'strongly diagonal';
+  if(zv)zv.style.color=Acol;
+  if(zl){zl.textContent=Albl;zl.style.color=Acol;}
+  function f(v){var s=v.toFixed(8);return s.indexOf('.')>=0?s:s+'.0';}
+  return 'precision highp float;\n'+
+'uniform vec2 res;uniform mat3 rot;uniform float zoom;\n'+
+'float S11='+f(S11)+';float Gamma='+f(Gamma)+';float Emax='+f(Emax)+';\n'+
+'float Edir(vec3 n){float w=n.x*n.x*n.y*n.y+n.y*n.y*n.z*n.z+n.z*n.z*n.x*n.x;return 1.0/max(abs(S11-(Gamma*0.5)*w),1e-6);}\n'+
+'float implicit(vec3 P){float r=length(P);if(r<0.001)return -1.0;return r-Edir(P/r)/Emax;}\n'+
+'vec3 nrm(vec3 P){float e=0.004;return normalize(vec3(implicit(P+vec3(e,0.0,0.0))-implicit(P-vec3(e,0.0,0.0)),implicit(P+vec3(0.0,e,0.0))-implicit(P-vec3(0.0,e,0.0)),implicit(P+vec3(0.0,0.0,e))-implicit(P-vec3(0.0,0.0,e))));}\n'+
+'vec3 palette(float t){vec3 a=vec3(0.5,0.5,0.5),b=vec3(0.5,0.5,0.5),c=vec3(1.0,1.0,1.0),d=vec3(0.0,0.33,0.67);return a+b*cos(6.28318*(c*t+d));}\n'+
+'void main(){\n'+
+'  vec2 uv=(gl_FragCoord.xy-res*0.5)/min(res.x,res.y);\n'+
+'  vec3 ro=rot*vec3(0.0,0.0,zoom);vec3 rd=normalize(rot*vec3(uv.x,uv.y,-1.6));\n'+
+'  float r=clamp(length(uv)*1.1,0.0,1.0);\n'+
+'  vec3 bgCol=mix(vec3(0.07,0.09,0.22),vec3(0.01,0.01,0.04),r*r);vec4 bg=vec4(bgCol,1.0);\n'+
+'  float bR=1.15;float b2=dot(ro,rd),c2=dot(ro,ro)-bR*bR;float disc=b2*b2-c2;\n'+
+'  if(disc<0.0){gl_FragColor=bg;return;}\n'+
+'  float sq=sqrt(disc);float tEn=max(-b2-sq,0.0),tEx=-b2+sq;\n'+
+'  if(tEx<0.0){gl_FragColor=bg;return;}\n'+
+'  float t=tEn,hit=-1.0,ss=0.018;float prev=implicit(ro+rd*t);\n'+
+'  for(int i=0;i<280;i++){t+=ss;if(t>tEx)break;float g=implicit(ro+rd*t);if(prev*g<0.0){hit=t-ss*(g/(g-prev));break;}prev=g;}\n'+
+'  if(hit<0.0){gl_FragColor=bg;return;}\n'+
+'  vec3 pos=ro+rd*hit;vec3 n=nrm(pos);if(dot(n,-rd)<0.0)n=-n;\n'+
+'  float Eval=Edir(normalize(pos));float Enorm=clamp(Eval/Emax,0.0,1.0);\n'+
+'  float dy=dot(n,vec3(0.0,1.0,0.0)),dz=dot(n,vec3(0.0,0.0,1.0));\n'+
+'  float hue=dy*dy*0.33+dz*dz*0.67+Enorm*0.15;\n'+
+'  vec3 iridBase=palette(hue);vec3 iridShift=palette(hue+0.5);\n'+
+'  vec3 l1=normalize(vec3(1.0,1.8,2.0)),l2=normalize(vec3(-0.8,-0.3,0.6));\n'+
+'  float l3=max(dot(n,normalize(vec3(-0.5,-1.0,-1.5))),0.0)*0.3;\n'+
+'  float diff=0.35+max(dot(n,l1),0.0)*0.7+max(dot(n,l2),0.0)*0.25+l3;\n'+
+'  float spec1=pow(max(dot(reflect(-l1,n),-rd),0.0),120.0)*1.5;\n'+
+'  float spec2=pow(max(dot(reflect(-l1,n),-rd),0.0),20.0)*0.4;\n'+
+'  float rim=pow(1.0-max(dot(n,-rd),0.0),2.5)*0.8;\n'+
+'  float fresnel=pow(1.0-max(dot(n,-rd),0.0),3.0);\n'+
+'  vec3 col=mix(iridBase,iridShift,Enorm*0.35)*diff;\n'+
+'  col+=iridShift*fresnel*0.6;col+=vec3(spec1+spec2);col+=iridShift*rim*0.45;\n'+
+'  col*=(0.7+Enorm*0.4);\n'+
+'  gl_FragColor=vec4(clamp(col,0.0,1.0),1.0);\n'+
+'}';}
+
+function mkSShader(type,src){var s=sgl.createShader(type);sgl.shaderSource(s,src);sgl.compileShader(s);if(!sgl.getShaderParameter(s,sgl.COMPILE_STATUS))console.error(sgl.getShaderInfoLog(s));return s;}
+
+function initStiffnessGL(){
+  var cv=document.getElementById('ellcv');
+  var wrap=document.getElementById('ellcv-wrap');
+  var w=Math.max(wrap?wrap.offsetWidth:80,40);
+  cv.width=w;cv.height=w;
+  sgl=cv.getContext('webgl');
+  if(!sgl){cv.style.display='none';return false;}
+  if(!squadBuf){squadBuf=sgl.createBuffer();sgl.bindBuffer(sgl.ARRAY_BUFFER,squadBuf);sgl.bufferData(sgl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),sgl.STATIC_DRAW);}
+  sRotMat=smat3Mul(sRotAxisAngle(0,1,0,0.6),sRotAxisAngle(1,0,0,-0.3));
+  sInitialized=true;
+  (function sloop(){requestAnimationFrame(sloop);drawStiffnessSurface();})();
+  return true;
+}
+
+function rebuildStiffnessShader(Ex,Ey,Ez,Gxy,nu){
+  if(!sInitialized&&!initStiffnessGL())return;
+  var Emean=(Ex+Ey+Ez)/3;
+  sZoom=3.4*(Math.max(Ex,Ey,Ez)*1.08/Emean);
+  var prg=sgl.createProgram();
+  sgl.attachShader(prg,mkSShader(sgl.VERTEX_SHADER,SVERT));
+  sgl.attachShader(prg,mkSShader(sgl.FRAGMENT_SHADER,buildStiffFrag(Ex,Ey,Ez,Gxy,nu)));
+  sgl.linkProgram(prg);
+  if(!sgl.getProgramParameter(prg,sgl.LINK_STATUS)){console.error(sgl.getProgramInfoLog(prg));return;}
+  if(sprog)sgl.deleteProgram(sprog);
+  sprog=prg;sgl.useProgram(sprog);
+  sgl.bindBuffer(sgl.ARRAY_BUFFER,squadBuf);
+  var loc=sgl.getAttribLocation(sprog,'p');
+  sgl.enableVertexAttribArray(loc);sgl.vertexAttribPointer(loc,2,sgl.FLOAT,false,0,0);
+  suRes=sgl.getUniformLocation(sprog,'res');
+  suRot=sgl.getUniformLocation(sprog,'rot');
+  suZoom=sgl.getUniformLocation(sprog,'zoom');
+}
+
+function drawStiffnessSurface(){
+  if(!sprog||!suRes)return;
+  var cv=document.getElementById('ellcv');
+  var wrap=document.getElementById('ellcv-wrap');
+  var w=Math.max(wrap?wrap.offsetWidth:cv.offsetWidth,40);
+  if(cv.width!==w){cv.width=w;cv.height=w;}
+  sRotMat=smat3Mul(sRotAxisAngle(0,1,0,0.003),sRotMat);
+  sRotMat=sOrthonorm(sRotMat);
+  sgl.viewport(0,0,cv.width,cv.height);
+  sgl.uniform2f(suRes,cv.width,cv.height);
+  sgl.uniformMatrix3fv(suRot,false,new Float32Array(sRotMat));
+  sgl.uniform1f(suZoom,sZoom);
+  sgl.drawArrays(sgl.TRIANGLE_STRIP,0,4);
+}
+
+// ── Homogenization ────────────────────────────────────────────────────────
+var lastHomogResult=null;
+
+function voxelizeBundleSDF(params,N){
+  var H=Math.PI,step=2*H/N,N2=N*N,vox=new Uint8Array(N*N*N),nSolid=0;
+  for(var ix=0;ix<N;ix++){var x=-H+(ix+0.5)*step;
+    for(var iy=0;iy<N;iy++){var y=-H+(iy+0.5)*step;
+      for(var iz=0;iz<N;iz++){var z=-H+(iz+0.5)*step;
+        if(SDF.scene(x,y,z,params)<0){vox[ix*N2+iy*N+iz]=1;nSolid++;}
+      }
+    }
+  }
+  return{vox:vox,nSolid:nSolid};
+}
+
+function computeMIL(vox,N){
+  var N2=N*N;
+  function mil(ax){var t=0;
+    for(var a=0;a<N;a++)for(var b=0;b<N;b++){var p=255;
+      for(var c=0;c<N;c++){
+        var i=ax===0?c*N2+a*N+b:ax===1?a*N2+c*N+b:a*N2+b*N+c;
+        var v=vox[i];if(p!==255&&v!==p)t++;p=v;}}
+    return t===0?N*1e6:(N*N*N)/(t*0.5);}
+  return{milX:mil(0),milY:mil(1),milZ:mil(2)};
+}
+
+function hsPlus(Es,nu,rho){
+  var K1=Es/(3*(1-2*nu)),G1=Es/(2*(1+nu));
+  var Kp=K1*rho/(1+(1-rho)*3*K1/(3*K1+4*G1));
+  var Gp=G1*rho/(1+(1-rho)*6*(K1+2*G1)/(5*G1*(3*K1+4*G1)));
+  return{Ehsp:9*Kp*Gp/(3*Kp+Gp),Gp:Gp};
+}
+
+function runBundleHomogenization(params,N,Es,nu){
+  var v=voxelizeBundleSDF(params,N);
+  var rho=v.nSolid/(N*N*N);
+  var mil=computeMIL(v.vox,N);
+  var hx=mil.milX*mil.milX,hy=mil.milY*mil.milY,hz=mil.milZ*mil.milZ;
+  var hmean=(hx+hy+hz)/3;
+  var wx=hx/hmean,wy=hy/hmean,wz=hz/hmean;
+  var hs=hsPlus(Es,nu,rho);
+  var Ex=hs.Ehsp*wx,Ey=hs.Ehsp*wy,Ez=hs.Ehsp*wz;
+  var Gxy=hs.Gp*Math.sqrt(wx*wy);
+  var nuEff=nu*(1-rho);
+  var aniso=Math.max(Ex,Ey,Ez)/Math.max(Math.min(Ex,Ey,Ez),1e-9);
+  return{rho:rho,Ex:Ex,Ey:Ey,Ez:Ez,Gxy:Gxy,nuEff:nuEff,aniso:aniso};
+}
+
+function displayHomoResults(res,N,Es){
+  function card(label,value,unit,color){
+    return '<div style="background:#0e0e1a;border:0.5px solid #2a2a3a;border-radius:8px;padding:7px 8px;text-align:center">'
+      +'<div style="font-size:15px;font-weight:500;color:'+(color||'#e0e0ff')+'">'+value+'</div>'
+      +'<div style="font-size:10px;color:#555;margin-top:1px">'+label+(unit?' <span style="color:#888">'+unit+'</span>':'')+'</div>'
+      +'</div>';
+  }
+  var anisoColor=res.aniso<1.1?'#888':res.aniso<1.5?'#22d3ee':'#e879f9';
+  document.getElementById('homoMetrics').innerHTML=
+    card('vol. fraction',(res.rho*100).toFixed(1)+'%','','#22c55e')+
+    card('E<sub>x</sub>',res.Ex.toFixed(2),'GPa','#22d3ee')+
+    card('E<sub>y</sub>',res.Ey.toFixed(2),'GPa','#e879f9')+
+    card('E<sub>z</sub>',res.Ez.toFixed(2),'GPa','#facc15')+
+    card('Zener A',res.aniso.toFixed(3),'',anisoColor)+
+    card('G<sub>xy</sub>',res.Gxy.toFixed(2),'GPa','#a78bfa')+
+    card('&#957;<sub>eff</sub>',res.nuEff.toFixed(3),'','#e0e0ff');
+  document.getElementById('homoResults').style.display='block';
+  document.getElementById('homoStatus').textContent=N+'\u00b3 \u00b7 \u03c1='+(res.rho*100).toFixed(1)+'% \u00b7 E_s='+Es+' GPa';
+  var btn=document.getElementById('exportBtn');
+  btn.textContent='Export JSON (+ homog)';
+  btn.style.borderColor='#7c6ff7';btn.style.color='#a89cf7';
+  setTimeout(function(){rebuildStiffnessShader(res.Ex,res.Ey,res.Ez,res.Gxy,res.nuEff);},50);
+}
+
+function onRunHomogenization(){
+  var btn=document.getElementById('runHomoBtn');
+  btn.disabled=true;btn.textContent='Running...';
+  document.getElementById('homoStatus').textContent='Voxelizing...';
+  setTimeout(function(){
+    var params=getParams();
+    var N=parseInt(document.getElementById('homoGrid').value);
+    var Es=parseFloat(document.getElementById('homoEs').value)||100;
+    var nu=parseFloat(document.getElementById('homoNu').value)||0.3;
+    var t0=performance.now();
+    var res=runBundleHomogenization(params,N,Es,nu);
+    var elapsed=(performance.now()-t0).toFixed(0);
+    lastHomogResult={res:res,N:N,Es:Es,nu:nu,params:params};
+    displayHomoResults(res,N,Es);
+    document.getElementById('homoStatus').textContent+=(' \u00b7 '+elapsed+'ms');
+    btn.disabled=false;btn.textContent='Run homogenization';
+  },30);
+}
+
+// Derive the tiling cell aspect for mesh handoff. XY period from the structural
+// pitch; Z period from the cross-section's rotational symmetry (C4 quarter turn
+// for the square grid, hStarts-fold helicoid, bN-fold braid, explicit zPeriod
+// weave). Warp breaks rotational symmetry → full turn LCM'd with the warp period
+// (cap 8). scale_xyz = [1, 1, Lz/Pxy] is informational; mesh recomputes the cell
+// authoritatively from the geometry params on import.
+function bundleCellAspect(p){
+  var TP=Math.PI*2;
+  var Pxy = p.structure===0?(p.nx*p.d+p.gap)
+          : p.structure===1?(2*p.hOuter+p.hGap)
+          : p.structure===2?(2*(p.bRadius+p.bFiber)+p.bGap)
+          : p.wvP;
+  Pxy=Math.max(Pxy,0.01);
+  var Lz;
+  if(p.structure===3){ Lz=Math.max(2*(p.wvA+p.wvR)+p.wvZGap,0.01); }
+  else if(p.structure===1){ var w=Math.abs(p.hPitch); Lz=w>1e-6?TP/w:Pxy; if(p.hZHand)Lz*=2; } // v0.2.3: 2π/pitch, not /starts (see mesh note)
+  else if(p.structure===2){ var w2=Math.abs(p.bPitch); Lz=w2>1e-6?TP/(Math.max(1,p.bN)*w2):Pxy; }
+  else {
+    var tw=Math.abs(p.twist), singleCircle=(p.nx<=1&&p.n<=2.1);
+    if(tw<1e-6||singleCircle){ Lz=(p.warpMode!==0&&Math.abs(p.warpFreq)>1e-6)?TP/Math.abs(p.warpFreq):Pxy; }
+    else if(p.warpMode===0){ Lz=(TP/4)/tw; }
+    else {
+      var Ltw=TP/tw, Lwp=(Math.abs(p.warpFreq)>1e-6)?TP/Math.abs(p.warpFreq):Ltw;
+      Lz=8*Ltw;
+      for(var m=1;m<=8;m++){ var Lc=m*Ltw, n=Lc/Lwp; if(Math.abs(n-Math.round(n))<1e-3*Math.max(1,Math.round(n))&&Math.round(n)>=1){ Lz=Lc; break; } }
+    }
+  }
+  return {Pxy:Pxy, Lz:Lz, scale_xyz:[1,1,Lz/Pxy]};
+}
+function buildExportJSON(){
+  var p=getParams();
+  var structNames=['bundle','helicoid','braid','weave'];
+  var asp=bundleCellAspect(p);
+  var out={
+    family:'bundle',
+    meta:{version:'1.1.0',tool:'bundle-builder',timestamp:new Date().toISOString(),
+          preset:structNames[p.structure]||'bundle'},
+    surface:{
+      type:'ihb',structure:structNames[p.structure]||'bundle',
+      topology:p.topoMode===0?(p.flip?'void':'half-solid'):'sheet',
+      iso_offset:p.iso,sheet_width:p.topoMode===1?p.sheetW:null
+    },
+    geometry:{
+      // Bundle
+      beam_radius:p.structure===0?p.r:null,
+      beam_shape:p.structure===0?['circle','rounded','square'][p.n<=2?0:p.n<=4?1:2]:null,
+      beams_per_side:p.structure===0?p.nx:null,
+      beam_spacing:p.structure===0?p.d:null,
+      column_gap:p.structure===0?p.gap:p.structure===1?p.hGap:p.structure===2?p.bGap:null,
+      twist_rate:p.structure===0?p.twist:null,
+      // Helicoid
+      pitch:p.structure===1?p.hPitch:p.structure===2?p.bPitch:null,
+      thickness:p.structure===1?p.hThick:null,
+      inner_radius:p.structure===1?p.hInner:null,
+      outer_radius:p.structure===1?p.hOuter:null,
+      starts:p.structure===1?p.hStarts:null,
+      // Braid
+      strand_count:p.structure===2?p.bN:null,
+      braid_radius:p.structure===2?p.bRadius:null,
+      fiber_radius:p.structure===2?p.bFiber:p.structure===3?p.wvR:null,
+      blend_k:p.structure===0?p.blend:p.structure===2?p.bBlend:p.structure===3?p.wvBlend:null,
+      // Weave
+      weave_pitch:p.structure===3?p.wvP:null,
+      weave_amplitude:p.structure===3?p.wvA:null,
+      weave_layer_gap:p.structure===3?p.wvZGap:null,
+      // Twist / warp modes (bundle)
+      twist_mode:p.structure===0?p.twistMode:null,
+      warp_mode:p.structure===0?p.warpMode:null,
+      warp_amp:p.structure===0?p.warpAmp:null,
+      warp_freq:p.structure===0?p.warpFreq:null,
+      warp_frame:p.structure===0?p.warpFrame:null,
+      // Helicoid extras
+      helicoid_blend:p.structure===1?p.hBlend:null,
+      col_handed:p.structure===1?p.hColHand:null,
+      z_handed:p.structure===1?p.hZHand:null,
+      // Braid extras
+      braid_col_handed:p.structure===2?p.bColHand:null,
+      // Tiling cell aspect (informational; mesh recomputes from params)
+      scale_xyz:asp.scale_xyz,
+      // Z-step
+      z_ramp_x:p.zRampX,z_ramp_y:p.zRampY,z_checker_step:p.zChkStep
+    }
+  };
+  if(lastHomogResult){
+    var r=lastHomogResult;
+    out.homogenization={
+      grid:r.N,E_solid_GPa:r.Es,poisson:r.nu,
+      volume_fraction:parseFloat((r.res.rho*100).toFixed(2)),
+      Ex_GPa:parseFloat(r.res.Ex.toFixed(3)),Ey_GPa:parseFloat(r.res.Ey.toFixed(3)),Ez_GPa:parseFloat(r.res.Ez.toFixed(3)),
+      Gxy_GPa:parseFloat(r.res.Gxy.toFixed(3)),nu_eff:parseFloat(r.res.nuEff.toFixed(4)),
+      anisotropy:parseFloat(r.res.aniso.toFixed(4)),
+      method:'MIL-HS',note:'periodic_ihb_geometry'
+    };
+  }
+  return out;
+}
+
+function openInMesh(){
+  var data=buildExportJSON();
+  var encoded=encodeURIComponent(JSON.stringify(data));
+  window.open('https://mshomper.github.io/f13ld.mesh/?r='+encoded,'_blank');
+}
+
+function onExportJSON(){
+  var data=buildExportJSON();
+  var json=JSON.stringify(data,null,2);
+  var ts=new Date().toISOString().slice(0,19).replace(/[:T]/g,'-');
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;a.download='bundle_'+data.meta.preset+'_'+ts+'.json';
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+  navigator.clipboard.writeText(json).catch(function(){});
+  var btn=document.getElementById('exportBtn');
+  var orig=btn.textContent;
+  btn.textContent='Copied + downloaded \u2713';btn.style.color='#69f0ae';btn.style.borderColor='#69f0ae';
+  setTimeout(function(){
+    btn.textContent=orig;
+    btn.style.color=lastHomogResult?'#a89cf7':'#666';
+    btn.style.borderColor=lastHomogResult?'#7c6ff7':'#2a2a3a';
+  },1800);
+}
+
+
+document.getElementById('sliceCtrl').style.display='flex';
+setTimeout(function(){regenerate();},100);
+window.onresize=function(){if(currentView==='sheet')rm.render();else sv.render();};
+</script>
+</body>
+</html>
