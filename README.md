@@ -6,6 +6,9 @@ A browser-native designer for interwoven implicit scaffolds — twisted beam arr
 
 **Live tool:** [mshomper.github.io/f13ld.bundle](https://mshomper.github.io/f13ld.bundle/)
 
+<img width="1215" height="1069" alt="bundlescreenshot" src="https://github.com/user-attachments/assets/59cbe4c2-1259-4426-a1aa-362b8790b89d" />
+
+
 ---
 
 ## What it does
