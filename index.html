@@ -7,7 +7,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{min-height:100%;background:#06080f;color:#e0e0ff;font-family:system-ui,sans-serif}
-#container{display:flex;flex-direction:column;height:100vh}
+#container{display:flex;flex-direction:column;height:100vh;max-width:1100px;margin:0 auto;width:100%}
 #cw{position:relative;background:#06080f;border-radius:12px 12px 0 0;overflow:hidden;border:0.5px solid #2a2a3a;flex:1;min-height:0;margin:16px 14px 0}
 canvas{display:block;width:100%;height:100%}
 #status{position:absolute;bottom:10px;left:10px;background:rgba(6,8,15,0.85);padding:5px 10px;border-radius:6px;font-size:11px;color:#555;pointer-events:none;border:0.5px solid #2a2a3a;z-index:10}
@@ -1600,5 +1600,478 @@ document.getElementById('sliceCtrl').style.display='flex';
 setTimeout(function(){regenerate();},100);
 window.onresize=function(){if(currentView==='sheet')rm.render();else sv.render();};
 </script>
+
+<!-- ===================================================================== -->
+<!-- ==========  F13LD HELP SYSTEM  ·  modular drop-in (v1.2)  ============ -->
+<!-- Per-tool parts: (1) #f13h-theme :root vars  (2) the CONFIG block.     -->
+<!-- The #f13h-style engine CSS and the script engine are identical        -->
+<!-- across tools (adds {sec:} section-label anchor; superset of v1.1, inert where unused).            -->
+<!-- ===================================================================== -->
+
+<!-- ---- PER-TOOL THEME (only block that changes color per tool) -------- -->
+<style id="f13h-theme">
+  :root{
+    --f13h-accent:      #a78bfa;
+    --f13h-accent-soft: #7c6ff7;
+    --f13h-panel:       #0e0e1a;
+    --f13h-panel2:      #1a1a2e;
+    --f13h-bg:          #06080f;
+    --f13h-border:      #2a2a3a;
+    --f13h-border-hi:   #3a3a5a;
+    --f13h-text:        #e0e0ff;
+    --f13h-dim:         #7c8aaa;
+    --f13h-bright:      #f0f1ff;
+    --f13h-glow:        rgba(124,111,247,0.22);
+  }
+</style>
+
+<!-- ---- ENGINE CSS (identical across tools) --------------------------- -->
+<style id="f13h-style">
+  .f13h-trigger{
+    width:28px;height:28px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:transparent;border:0.5px solid var(--f13h-border-hi,#5C4624);
+    color:var(--f13h-dim,#8B7A5C);font-family:'Exo 2',system-ui,sans-serif;
+    font-size:14px;font-weight:700;cursor:pointer;flex-shrink:0;
+    transition:all .15s ease;line-height:1;padding:0;
+  }
+  .f13h-trigger:hover{color:var(--f13h-accent,#F59E0B);border-color:var(--f13h-accent,#F59E0B);
+    box-shadow:0 0 8px var(--f13h-glow,rgba(245,158,11,0.25));}
+  .f13h-trigger.active{color:var(--f13h-accent,#F59E0B);border-color:var(--f13h-accent,#F59E0B);}
+  .f13h-i{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:14px;height:14px;border-radius:50%;
+    border:0.5px solid var(--f13h-border-hi,#5C4624);color:var(--f13h-dim,#8B7A5C);
+    background:transparent;font-size:9px;font-weight:700;font-style:italic;
+    font-family:Georgia,'Times New Roman',serif;
+    cursor:pointer;margin-left:6px;flex-shrink:0;vertical-align:middle;
+    transition:all .15s ease;padding:0;line-height:1;
+  }
+  .f13h-i:hover{color:var(--f13h-bg,#0F0B07);background:var(--f13h-accent,#F59E0B);border-color:var(--f13h-accent,#F59E0B);}
+  .f13h-scrim{
+    position:fixed;inset:0;background:rgba(4,5,9,0.55);
+    -webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px);
+    opacity:0;pointer-events:none;transition:opacity .22s ease;z-index:998;
+  }
+  .f13h-scrim.open{opacity:1;pointer-events:auto;}
+  .f13h-drawer{
+    position:fixed;top:48px;right:0;
+    width:min(440px,100vw);max-height:calc(100vh - 64px);
+    background:var(--f13h-panel,#15100A);
+    border:0.5px solid var(--f13h-border,#3A2D1A);border-top:none;
+    border-radius:0 0 0 14px;
+    box-shadow:0 20px 50px rgba(0,0,0,0.5);
+    display:flex;flex-direction:column;
+    transform:translateY(calc(-100% - 48px));opacity:0;pointer-events:none;
+    transition:transform .28s cubic-bezier(.22,.61,.36,1),opacity .2s ease;
+    z-index:999;font-family:'Exo 2',system-ui,sans-serif;
+  }
+  .f13h-drawer.open{transform:translateY(0);opacity:1;pointer-events:auto;}
+  @media (max-width:480px){ .f13h-drawer{width:100vw;border-radius:0;right:0 !important;} }
+  .f13h-head{
+    display:flex;align-items:center;gap:10px;
+    padding:13px 16px 11px;border-bottom:0.5px solid var(--f13h-border,#3A2D1A);flex-shrink:0;
+  }
+  .f13h-head h2{ font-size:13px;font-weight:700;letter-spacing:0.06em;color:var(--f13h-bright,#FEF3C7);margin:0; }
+  .f13h-head h2 b{color:var(--f13h-accent,#F59E0B);font-weight:700;}
+  .f13h-head h2 span{font-size:9px;letter-spacing:0.14em;color:var(--f13h-dim,#8B7A5C);text-transform:uppercase;margin-left:6px;}
+  .f13h-tut{
+    margin-left:auto;font-size:10px;letter-spacing:0.04em;color:var(--f13h-accent,#F59E0B);
+    text-decoration:none;border:0.5px solid var(--f13h-accent-soft,#D97706);border-radius:20px;
+    padding:3px 10px;white-space:nowrap;transition:background .15s;
+  }
+  .f13h-tut:hover{background:var(--f13h-glow,rgba(245,158,11,0.12));}
+  .f13h-close{
+    width:24px;height:24px;border-radius:6px;border:none;background:transparent;
+    color:var(--f13h-dim,#8B7A5C);font-size:18px;cursor:pointer;line-height:1;
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;
+  }
+  .f13h-close:hover{color:var(--f13h-bright,#FEF3C7);background:var(--f13h-panel2,#1C160D);}
+  .f13h-body{overflow-y:auto;padding:4px 16px 20px;}
+  .f13h-intro{font-size:11px;line-height:1.55;color:var(--f13h-dim,#8B7A5C);margin:12px 0 4px;padding-bottom:4px;}
+  .f13h-section-t{
+    font-size:9px;letter-spacing:0.16em;text-transform:uppercase;color:var(--f13h-accent,#F59E0B);
+    margin:18px 0 8px;display:flex;align-items:center;gap:7px;
+  }
+  .f13h-section-t::before{content:"";width:4px;height:4px;border-radius:50%;
+    background:var(--f13h-accent,#F59E0B);box-shadow:0 0 6px var(--f13h-accent,#F59E0B);}
+  .f13h-card{
+    background:var(--f13h-panel2,#1C160D);border:0.5px solid var(--f13h-border,#3A2D1A);
+    border-radius:9px;padding:11px 12px;margin-bottom:8px;
+    transition:border-color .25s ease,box-shadow .25s ease;
+  }
+  .f13h-card.flash{border-color:var(--f13h-accent,#F59E0B);
+    box-shadow:0 0 0 1px var(--f13h-accent,#F59E0B),0 0 14px var(--f13h-glow,rgba(245,158,11,0.28));}
+  .f13h-card-h{display:flex;align-items:baseline;gap:8px;margin-bottom:3px;flex-wrap:wrap;}
+  .f13h-name{font-size:12px;font-weight:700;color:var(--f13h-bright,#FEF3C7);letter-spacing:0.02em;}
+  .f13h-range{
+    font-size:9px;color:var(--f13h-dim,#8B7A5C);border:0.5px solid var(--f13h-border-hi,#5C4624);
+    border-radius:10px;padding:1px 7px;white-space:nowrap;font-family:'JetBrains Mono',ui-monospace,monospace;
+  }
+  .f13h-line{display:flex;gap:8px;font-size:11px;line-height:1.5;margin-top:5px;color:var(--f13h-text,#D4C5A8);}
+  .f13h-tag{flex-shrink:0;font-size:8px;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--f13h-dim,#8B7A5C);width:34px;padding-top:2px;font-weight:700;text-align:right;}
+  .f13h-line.means .f13h-tag{color:var(--f13h-accent-soft,#D97706);}
+  .f13h-body::-webkit-scrollbar{width:8px;}
+  .f13h-body::-webkit-scrollbar-track{background:var(--f13h-panel,#15100A);}
+  .f13h-body::-webkit-scrollbar-thumb{background:var(--f13h-border,#3A2D1A);border-radius:4px;}
+  .f13h-body::-webkit-scrollbar-thumb:hover{background:var(--f13h-border-hi,#5C4624);}
+</style>
+
+<script id="f13h-script">
+(function(){
+  "use strict";
+
+  /* ============ PER-TOOL CONFIG (changes per tool) ===================== */
+  var TUTORIAL_URL = 'https://tutorial.f13ld.app/bundle';
+  var TOOL_TITLE   = 'bundle';
+  var ROW_SEL      = '.sc-group';
+  var INTRO = 'F13LD.bundle builds helical fiber architectures \u2014 twisted bundles, ruled helicoids, interlocked braids, and plain weaves. Pick a structure, shape its fibers and twist, then set the solid topology. Tap any i beside a control to jump here.';
+
+  var SECTIONS = [
+    { title:'View', items:[
+      { id:'view', label:'view \u00b7 Sheet 3D / Section 2D', anchor:{row:'#btnViewSheet'},
+        what:'Switches between the meshed 3D structure and a flat 2D cross-section.',
+        see:'Sheet 3D = the built fibers; Section 2D = a single plane through the volume.',
+        why:'Section 2D is the fast lane for checking fiber packing and contact before a 3D build.' },
+      { id:'viewslice', label:'slice pos \u00b7 Z/Y/X \u00b7 64/128/256', anchor:{row:'#slicePos'},
+        what:'Position, axis, and resolution of the 2D section.',
+        see:'Slides the cutting plane; Z/Y/X set its normal; 64/128/256 set slice detail.',
+        why:'Reads the interior and fiber connectivity plane by plane.' }
+    ]},
+    { title:'Structure', items:[
+      { id:'structure', label:'structure', anchor:{sec:'#structure'},
+        what:'The family built: Bundle (twisted fiber array), Helicoid (minimal ruled surface), Braid (interlocked helical strands), or Weave (plain woven sheet).',
+        see:'Swaps the whole control set below and the structure entirely.',
+        why:'Four biomimetic fiber architectures \u2014 from twisted tows to woven sheets.' }
+    ]},
+    { title:'Bundle \u00b7 fibers', items:[
+      { id:'bshape', label:'beam shape \u00b7 Circle / Rounded / Square', anchor:{row:'#btnShapeCircle'},
+        what:'Cross-section profile of each fiber.',
+        see:'Round, super-elliptic, or square tows.',
+        why:'Packing efficiency and contact area change with the profile.' },
+      { id:'beamR', label:'beam radius', range:'0.03 \u2013 0.25', anchor:{row:'#beamR'},
+        what:'Radius of each fiber.',
+        see:'Fibers thicken or thin; density rises with radius.',
+        why:'Relative-density dial for the bundle.' },
+      { id:'beamN', label:'beams / side', range:'1 \u2013 4', anchor:{row:'#beamN'},
+        what:'Fibers per side of the bundle grid.',
+        see:'More fibers = a denser tow.',
+        why:'Fiber count per bundle.' },
+      { id:'beamD', label:'spacing', range:'0.10 \u2013 0.60', anchor:{row:'#beamD'},
+        what:'Center-to-center spacing of fibers.',
+        see:'Spreads or tightens the packing.',
+        why:'Sets the gap between fibers within a bundle.' },
+      { id:'bundleGap', label:'column gap', range:'\u22120.80 \u2013 0.50', anchor:{row:'#bundleGap'},
+        what:'Gap between neighboring bundle columns when tiled.',
+        see:'Separates or merges adjacent bundles; negative overlaps them.',
+        why:'Inter-bundle spacing across the lattice.' },
+      { id:'blendK', label:'blend k', range:'0 \u2013 0.08', anchor:{row:'#blendK'},
+        what:'Smooth-union blend radius between fibers.',
+        see:'Fibers fuse with rounded fillets instead of hard contact.',
+        why:'How merged vs. discrete the tow reads \u2014 and how printable the junctions are.' }
+    ]},
+    { title:'Bundle \u00b7 twist & warp', items:[
+      { id:'twistRate', label:'twist rate', range:'0 \u2013 4', anchor:{row:'#twistRate'},
+        what:'Helical twist applied along the bundle axis.',
+        see:'Fibers spiral; 0 = straight.',
+        why:'The twist that gives a tow its strength and cohesion.' },
+      { id:'twistMode', label:'twist mode \u00b7 Uniform / Checkerboard', anchor:{row:'#btnTwistU'},
+        what:'Whether all columns twist the same way or alternate.',
+        see:'Uniform spiral vs. a checkerboarded handedness.',
+        why:'Alternating twist balances torsion across the lattice.' },
+      { id:'warp', label:'warp \u00b7 Off / X / XY  (+ amp, freq, frame)', anchor:{row:'#btnWarpOff'},
+        what:'Optional sinusoidal warp of the bundle path: axis (off / X / XY), amplitude, frequency, and frame (world or fiber).',
+        see:'Straight bundles undulate \u2014 amplitude sets how far, frequency how often, frame whether the warp follows the fiber.',
+        why:'Adds waviness / crimp \u2014 the gentle undulation seen in natural fiber bundles.' }
+    ]},
+    { title:'Helicoid', items:[
+      { id:'hPitch', label:'pitch \u03c9', range:'0.3 \u2013 4.0', anchor:{row:'#hPitch'},
+        what:'Helical pitch of the ruled surface.',
+        see:'Tighter or looser spiral.',
+        why:'Turns per unit height of the helicoid.' },
+      { id:'hThick', label:'thickness', range:'0.01 \u2013 0.15', anchor:{row:'#hThick'},
+        what:'Wall thickness of the helicoid sheet.',
+        see:'The ribbon fattens or thins.',
+        why:'Relative density of the surface.' },
+      { id:'hInner', label:'inner radius', range:'0.05 \u2013 0.80', anchor:{row:'#hInner'},
+        what:'Inner radius of the helicoid.',
+        see:'Opens or closes the central hole.',
+        why:'The bore of the ruled surface.' },
+      { id:'hOuter', label:'outer radius', range:'0.30 \u2013 2.0', anchor:{row:'#hOuter'},
+        what:'Outer radius of the helicoid.',
+        see:'Grows or shrinks the overall footprint.',
+        why:'The span of the ruled surface.' },
+      { id:'hStarts', label:'starts \u00b7 1 / 2 / 3', anchor:{row:'#btnHS1'},
+        what:'Number of interleaved helical starts.',
+        see:'One, two, or three nested ribbons.',
+        why:'Multi-start helicoids \u2014 like multi-thread screws.' },
+      { id:'hHand', label:'handedness \u00b7 column XY / layer Z', anchor:{row:'#btnHColHand'},
+        what:'Chirality pattern across columns (XY) and layers (Z).',
+        see:'Mixes left- and right-handed cells in a pattern.',
+        why:'Balances chirality so the lattice isn\u2019t globally twisted.' },
+      { id:'hBlend', label:'tiling blend k', range:'0 \u2013 0.08', anchor:{row:'#hBlend'},
+        what:'Smooth-union blend at cell boundaries.',
+        see:'Neighboring cells fuse with fillets.',
+        why:'How seamlessly cells merge when tiled.' },
+      { id:'hGap', label:'column gap', range:'\u22120.80 \u2013 1.00', anchor:{row:'#hGap'},
+        what:'Gap between tiled columns.',
+        see:'Separates or overlaps adjacent helicoids.',
+        why:'Inter-cell spacing.' }
+    ]},
+    { title:'Braid', items:[
+      { id:'bN', label:'count N \u00b7 2 / 3 / 4', anchor:{row:'#btnBN2'},
+        what:'Number of interlocked strands.',
+        see:'A 2-, 3-, or 4-strand braid.',
+        why:'Strand count sets the braid pattern.' },
+      { id:'bRadius', label:'braid radius', range:'0.10 \u2013 1.50', anchor:{row:'#bRadius'},
+        what:'Radius of the braid\u2019s circular path.',
+        see:'Widens or tightens the braid envelope.',
+        why:'Overall braid diameter.' },
+      { id:'bPitch', label:'pitch \u03c9', range:'0.3 \u2013 4.0', anchor:{row:'#bPitch'},
+        what:'Helical pitch of the strands.',
+        see:'Tighter or looser interlock.',
+        why:'Turns per unit length of the braid.' },
+      { id:'bFiber', label:'fiber radius', range:'0.03 \u2013 0.30', anchor:{row:'#bFiber'},
+        what:'Radius of each strand.',
+        see:'Strands thicken or thin.',
+        why:'Relative density of the braid.' },
+      { id:'bBlend', label:'blend k', range:'0 \u2013 0.08', anchor:{row:'#bBlend'},
+        what:'Smooth-union blend where strands meet.',
+        see:'Strands fuse with fillets at crossings.',
+        why:'Discrete vs. merged interlock.' },
+      { id:'bHand', label:'handedness \u00b7 column XY', anchor:{row:'#btnBColHand'},
+        what:'Chirality pattern across columns.',
+        see:'Uniform or checkerboarded handedness.',
+        why:'Balances braid chirality across the tiling.' },
+      { id:'bGap', label:'column gap', range:'\u22120.80 \u2013 1.00', anchor:{row:'#bGap'},
+        what:'Gap between tiled braid columns.',
+        see:'Separates or overlaps neighbors.',
+        why:'Inter-braid spacing.' }
+    ]},
+    { title:'Weave', items:[
+      { id:'wvR', label:'fiber radius', range:'0.02 \u2013 0.25', anchor:{row:'#wvR'},
+        what:'Radius of the woven fibers.',
+        see:'Threads thicken or thin.',
+        why:'Relative density of the weave.' },
+      { id:'wvP', label:'pitch', range:'0.20 \u2013 1.50', anchor:{row:'#wvP'},
+        what:'Spacing between adjacent fibers.',
+        see:'Tighter or looser weave.',
+        why:'Thread count of the sheet.' },
+      { id:'wvA', label:'amplitude', range:'0 \u2013 0.40', anchor:{row:'#wvA'},
+        what:'Crimp height as fibers pass over and under.',
+        see:'Flatter or more pronounced interlacing.',
+        why:'The undulation that locks a plain weave together.' },
+      { id:'wvBlend', label:'blend k', range:'0 \u2013 0.06', anchor:{row:'#wvBlend'},
+        what:'Smooth-union blend at crossings.',
+        see:'Crossings fuse with fillets.',
+        why:'Discrete vs. bonded weave.' },
+      { id:'wvZGap', label:'layer gap', range:'\u22120.30 \u2013 0.60', anchor:{row:'#wvZGap'},
+        what:'Spacing between stacked weave layers.',
+        see:'Separates or merges plies.',
+        why:'Inter-ply spacing for laminated sheets.' }
+    ]},
+    { title:'Common \u00b7 z-step', items:[
+      { id:'zstep', label:'z-step \u00b7 ramp X / Y / checker', range:'\u22123.1 \u2013 3.1', anchor:{row:'#zRampX'},
+        what:'Per-layer phase ramp along X and Y, plus a checkerboard step.',
+        see:'Successive layers shift or rotate, building a graded or alternating stack.',
+        why:'Functionally-graded stacking \u2014 vary fiber orientation through the thickness.' }
+    ]},
+    { title:'Common \u00b7 topology', items:[
+      { id:'topomode', label:'topology \u00b7 Half-solid / Sheet  (+ flip)', anchor:{row:'#btnTopoHalf'},
+        what:'How the field becomes a solid: one side filled (Half-solid) or a thin shell (Sheet). Flip swaps which side is kept.',
+        see:'Half-solid = filled network; Sheet = a constant-thickness shell.',
+        why:'Bulk network vs. wall-efficient shell.' },
+      { id:'sheetWidth', label:'sheet width', range:'0.005 \u2013 0.08 \u00b7 sheet', anchor:{row:'#sheetWidth'},
+        what:'Wall thickness in Sheet mode.',
+        see:'The shell fattens or thins.',
+        why:'Relative density for the sheet topology.' },
+      { id:'isoOffset', label:'iso offset', range:'\u22120.15 \u2013 0.15', anchor:{row:'#isoOffset'},
+        what:'Shifts the level set the surface is drawn at.',
+        see:'Sweeps solid fraction up or down.',
+        why:'Fine volume-fraction trim.' }
+    ]},
+    { title:'Homogenization \u00b7 MIL-HS', items:[
+      { id:'grid', label:'grid', range:'32\u00b3 / 48\u00b3 / 64\u00b3', anchor:{row:'#homoGrid'},
+        what:'Voxel resolution used to estimate effective stiffness.',
+        see:'No change to the model; higher grid = more accurate numbers, slower run.',
+        why:'Bump it when the anisotropy ratios need to be trustworthy.' },
+      { id:'es', label:'E\u209b (GPa)',
+        what:'Young\u2019s modulus of the bulk solid you will print.',
+        see:'Scales the reported effective moduli linearly.',
+        why:'Sets the material baseline \u2014 e.g. Ti-6Al-4V \u2248 110 GPa \u2014 that the estimate scales from.' },
+      { id:'nu', label:'\u03bd (solid)', range:'0 \u2013 0.49',
+        what:'Poisson\u2019s ratio of the bulk solid.',
+        see:'Adjusts the estimated effective response.',
+        why:'The solid\u2019s lateral coupling, fed into the MIL-HS bound.' },
+      { id:'run', label:'Run homogenization',
+        what:'Estimates the directional-stiffness surface, volume fraction, and surface area for the current geometry.',
+        see:'Fills the stiffness glyph, the per-axis moduli, the Zener ratio, and the metrics row.',
+        why:'A fast estimate (MIL fabric + Hashin\u2013Shtrikman ceiling); F13LD.lab does the rigorous FFT version.' }
+    ]},
+    { title:'Render', items:[
+      { id:'quality', label:'quality \u00b7 Low / Med / High',
+        what:'Render quality of the 3D preview (top of the viewport).',
+        see:'Higher = smoother fibers, slower; lower = faster, blockier.',
+        why:'Preview fidelity only \u2014 it does not change geometry or export.' }
+    ]},
+    { title:'Handoff', items:[
+      { id:'export', label:'Export JSON / Open in F13LD.mesh',
+        what:'Saves the current recipe as JSON, or hands it straight to F13LD.mesh via the header button.',
+        see:'Downloads a file; in F13LD.mesh the recipe becomes a watertight, printable 3MF.',
+        why:'The bridge from fiber design to meshing and printing.' }
+    ]}
+  ];
+  /* ============ END PER-TOOL CONFIG ==================================== */
+
+  function el(tag, cls, html){ var n=document.createElement(tag); if(cls) n.className=cls; if(html!=null) n.innerHTML=html; return n; }
+
+  var scrim, drawer, trigger;
+
+  function line(tag, txt, kind){
+    var l = el('div','f13h-line'+(kind?(' '+kind):''));
+    l.appendChild(el('span','f13h-tag',tag));
+    l.appendChild(el('span',null,txt));
+    return l;
+  }
+
+  function build(){
+    scrim = el('div','f13h-scrim');
+    drawer = el('div','f13h-drawer');
+
+    var head = el('div','f13h-head');
+    head.appendChild(el('h2', null, 'F13LD.<b>'+TOOL_TITLE+'</b><span>field guide</span>'));
+    var tut = document.createElement('a');
+    tut.className='f13h-tut'; tut.href=TUTORIAL_URL; tut.target='_blank'; tut.rel='noopener';
+    tut.textContent='Tutorial \u2197';
+    head.appendChild(tut);
+    var close = el('button','f13h-close','\u00d7'); close.setAttribute('aria-label','Close');
+    close.addEventListener('click', closeDrawer);
+    head.appendChild(close);
+    drawer.appendChild(head);
+
+    var body = el('div','f13h-body');
+    body.appendChild(el('div','f13h-intro', INTRO));
+    SECTIONS.forEach(function(sec){
+      body.appendChild(el('div','f13h-section-t', sec.title));
+      sec.items.forEach(function(it){
+        var card = el('div','f13h-card'); card.id='f13h-card-'+it.id;
+        var h = el('div','f13h-card-h');
+        h.appendChild(el('span','f13h-name', it.label));
+        if(it.range) h.appendChild(el('span','f13h-range', it.range));
+        card.appendChild(h);
+        if(it.what) card.appendChild(line('sets',  it.what));
+        if(it.see)  card.appendChild(line('shows', it.see));
+        if(it.why)  card.appendChild(line('means', it.why, 'means'));
+        body.appendChild(card);
+      });
+    });
+    drawer.appendChild(body);
+
+    document.body.appendChild(scrim);
+    document.body.appendChild(drawer);
+    scrim.addEventListener('click', closeDrawer);
+  }
+
+  /* keep the drawer tucked under the header's right edge (handles centered layouts) */
+  function alignDrawer(){
+    if(!drawer) return;
+    var h = document.querySelector('.f13ld-header');
+    if(!h) return;
+    var r = h.getBoundingClientRect();
+    drawer.style.right = Math.max(0, Math.round(window.innerWidth - r.right)) + 'px';
+  }
+
+  function openDrawer(id){
+    alignDrawer();
+    scrim.classList.add('open');
+    drawer.classList.add('open');
+    if(trigger) trigger.classList.add('active');
+    if(id){
+      setTimeout(function(){
+        var c = document.getElementById('f13h-card-'+id);
+        if(!c) return;
+        c.scrollIntoView({block:'center', behavior:'smooth'});
+        c.classList.add('flash');
+        setTimeout(function(){ c.classList.remove('flash'); }, 1500);
+      }, 90);
+    }
+  }
+  function closeDrawer(){
+    scrim.classList.remove('open');
+    drawer.classList.remove('open');
+    if(trigger) trigger.classList.remove('active');
+  }
+
+  function makeI(id){
+    var b = el('button','f13h-i','i'); b.type='button';
+    b.setAttribute('aria-label','About this control');
+    b.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); openDrawer(id); });
+    return b;
+  }
+
+  /* resolve the <label> for a control row, tolerant of different markups */
+  function rowLabel(sel){
+    var elx = document.querySelector(sel); if(!elx) return null;
+    var c = elx.closest(ROW_SEL);
+    if(c){ var l = c.querySelector('label'); if(l) return l; }
+    var lw = elx.closest('label'); if(lw) return lw;   /* label-wrapped input */
+    return null;
+  }
+
+  /* place an inline "i" using one of: row | into | after | titleBefore */
+  /* find the nearest preceding .sec-lbl heading for a control (section-titled groups) */
+  function secLabelFor(sel){
+    var el = document.querySelector(sel); if(!el) return null;
+    var node = el;
+    while(node && node !== document.body){
+      var p = node.previousElementSibling;
+      while(p){
+        if(p.classList && p.classList.contains('sec-lbl')) return p;
+        p = p.previousElementSibling;
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function place(item){
+    var a = item.anchor; if(!a) return;
+    if(a.sec){ var sl = secLabelFor(a.sec); if(sl) sl.appendChild(makeI(item.id)); return; }
+    if(a.into){ var t = document.querySelector(a.into); if(t) t.appendChild(makeI(item.id)); return; }
+    if(a.titleBefore){ var e = document.querySelector(a.titleBefore);
+      if(e && e.previousElementSibling) e.previousElementSibling.appendChild(makeI(item.id)); return; }
+    if(a.after){ var x = document.querySelector(a.after);
+      if(x && x.parentNode) x.parentNode.insertBefore(makeI(item.id), x.nextSibling); return; }
+    if(a.row){ var l = rowLabel(a.row); if(!l) return;
+      if(l.id){ l.parentNode.insertBefore(makeI(item.id), l.nextSibling); }  /* app may rewrite this label's innerHTML; sibling survives */
+      else { l.appendChild(makeI(item.id)); }
+      return; }
+  }
+
+  function init(){
+    build();
+    var fhRight = document.querySelector('.fh-right');
+    if(fhRight){
+      trigger = el('button','f13h-trigger','?');
+      trigger.type='button';
+      trigger.title='Help \u00b7 control guide';
+      trigger.setAttribute('aria-label','Help');
+      trigger.addEventListener('click', function(){
+        if(drawer.classList.contains('open')) closeDrawer(); else openDrawer(null);
+      });
+      fhRight.insertBefore(trigger, fhRight.firstChild);
+    }
+    SECTIONS.forEach(function(sec){ sec.items.forEach(place); });
+    alignDrawer();
+    window.addEventListener('resize', alignDrawer);
+    document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeDrawer(); });
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+<!-- =====================  END F13LD HELP SYSTEM  ======================= -->
 </body>
 </html>
