@@ -401,18 +401,18 @@ select.fld option{background:var(--card);color:var(--ink)}
         <button class="mode-btn" id="btnShapeSquare" onclick="onShape('square')">Square</button>
       </div>
     </div>
-    <div class="sc-group sl" data-w-slider="beamR"><label for="beamR">radius</label><span class="sv" id="beamRv">0.090</span><input type="range" id="beamR" min="0.03" max="0.25" step="0.005" value="0.09" oninput="onP(this,'beamRv')"></div>
-    <div class="sc-group sl" data-w-slider="beamN"><label for="beamN">beams / side</label><span class="sv" id="beamNv">2</span><input type="range" id="beamN" min="1" max="4" step="1" value="2" oninput="onP(this,'beamNv',0)"></div>
-    <div class="sc-group sl" data-w-slider="beamD"><label for="beamD">spacing</label><span class="sv" id="beamDv">0.280</span><input type="range" id="beamD" min="0.10" max="0.60" step="0.005" value="0.28" oninput="onP(this,'beamDv')"></div>
-    <div class="sc-group sl" data-w-slider="blendK"><label for="blendK">blend k</label><span class="sv" id="blendKV">0.010</span><input type="range" id="blendK" min="0.00" max="0.08" step="0.002" value="0.01" oninput="onP(this,'blendKV')"></div>
+    <div class="sc-group sl" data-w-slider="beamR"><label id="lbl-beamR" for="beamR">radius</label><span class="sv" id="beamRv">0.090</span><input type="range" id="beamR" min="0.03" max="0.25" step="0.005" value="0.09" oninput="onP(this,'beamRv')"></div>
+    <div class="sc-group sl" data-w-slider="beamN"><label id="lbl-beamN" for="beamN">beams / side</label><span class="sv" id="beamNv">2</span><input type="range" id="beamN" min="1" max="4" step="1" value="2" oninput="onP(this,'beamNv',0)"></div>
+    <div class="sc-group sl" data-w-slider="beamD"><label id="lbl-beamD" for="beamD">spacing</label><span class="sv" id="beamDv">0.280</span><input type="range" id="beamD" min="0.10" max="0.60" step="0.005" value="0.28" oninput="onP(this,'beamDv')"></div>
+    <div class="sc-group sl" data-w-slider="blendK"><label id="lbl-blendK" for="blendK">blend k</label><span class="sv" id="blendKV">0.010</span><input type="range" id="blendK" min="0.00" max="0.08" step="0.002" value="0.01" oninput="onP(this,'blendKV')"></div>
   </div>
 
   <!-- HELICOID -->
   <div data-st="1">
-    <div class="sc-group sl" data-w-slider="hPitch"><label for="hPitch">pitch &omega;</label><span class="sv" id="hPitchV">1.500</span><input type="range" id="hPitch" min="0.3" max="4.0" step="0.05" value="1.5" oninput="onP(this,'hPitchV')"></div>
-    <div class="sc-group sl" data-w-slider="hThick"><label for="hThick">thickness</label><span class="sv" id="hThickV">0.040</span><input type="range" id="hThick" min="0.01" max="0.15" step="0.005" value="0.04" oninput="onP(this,'hThickV')"></div>
-    <div class="sc-group sl" data-w-slider="hInner"><label for="hInner">inner radius</label><span class="sv" id="hInnerV">0.250</span><input type="range" id="hInner" min="0.05" max="0.80" step="0.01" value="0.25" oninput="onP(this,'hInnerV')"></div>
-    <div class="sc-group sl" data-w-slider="hOuter"><label for="hOuter">outer radius</label><span class="sv" id="hOuterV">1.200</span><input type="range" id="hOuter" min="0.30" max="2.00" step="0.02" value="1.20" oninput="onP(this,'hOuterV')"></div>
+    <div class="sc-group sl" data-w-slider="hPitch"><label id="lbl-hPitch" for="hPitch">pitch &omega;</label><span class="sv" id="hPitchV">1.500</span><input type="range" id="hPitch" min="0.3" max="4.0" step="0.05" value="1.5" oninput="onP(this,'hPitchV')"></div>
+    <div class="sc-group sl" data-w-slider="hThick"><label id="lbl-hThick" for="hThick">thickness</label><span class="sv" id="hThickV">0.040</span><input type="range" id="hThick" min="0.01" max="0.15" step="0.005" value="0.04" oninput="onP(this,'hThickV')"></div>
+    <div class="sc-group sl" data-w-slider="hInner"><label id="lbl-hInner" for="hInner">inner radius</label><span class="sv" id="hInnerV">0.250</span><input type="range" id="hInner" min="0.05" max="0.80" step="0.01" value="0.25" oninput="onP(this,'hInnerV')"></div>
+    <div class="sc-group sl" data-w-slider="hOuter"><label id="lbl-hOuter" for="hOuter">outer radius</label><span class="sv" id="hOuterV">1.200</span><input type="range" id="hOuter" min="0.30" max="2.00" step="0.02" value="1.20" oninput="onP(this,'hOuterV')"></div>
     <div class="sc-group row" id="grp-hstarts">
       <label>starts</label>
       <div id="w-hstarts"></div>
@@ -435,18 +435,18 @@ select.fld option{background:var(--card);color:var(--ink)}
         <button class="mode-btn" id="btnBN4" onclick="onBraidN(4)">4</button>
       </div>
     </div>
-    <div class="sc-group sl" data-w-slider="bRadius"><label for="bRadius">braid radius</label><span class="sv" id="bRadiusV">0.500</span><input type="range" id="bRadius" min="0.10" max="1.50" step="0.02" value="0.50" oninput="onP(this,'bRadiusV')"></div>
-    <div class="sc-group sl" data-w-slider="bPitch"><label for="bPitch">pitch &omega;</label><span class="sv" id="bPitchV">1.200</span><input type="range" id="bPitch" min="0.3" max="4.0" step="0.05" value="1.20" oninput="onP(this,'bPitchV')"></div>
-    <div class="sc-group sl" data-w-slider="bFiber"><label for="bFiber">fiber radius</label><span class="sv" id="bFiberV">0.120</span><input type="range" id="bFiber" min="0.03" max="0.30" step="0.005" value="0.12" oninput="onP(this,'bFiberV')"></div>
-    <div class="sc-group sl" data-w-slider="bBlend"><label for="bBlend">blend k</label><span class="sv" id="bBlendV">0.020</span><input type="range" id="bBlend" min="0.00" max="0.08" step="0.002" value="0.02" oninput="onP(this,'bBlendV')"></div>
+    <div class="sc-group sl" data-w-slider="bRadius"><label id="lbl-bRadius" for="bRadius">braid radius</label><span class="sv" id="bRadiusV">0.500</span><input type="range" id="bRadius" min="0.10" max="1.50" step="0.02" value="0.50" oninput="onP(this,'bRadiusV')"></div>
+    <div class="sc-group sl" data-w-slider="bPitch"><label id="lbl-bPitch" for="bPitch">pitch &omega;</label><span class="sv" id="bPitchV">1.200</span><input type="range" id="bPitch" min="0.3" max="4.0" step="0.05" value="1.20" oninput="onP(this,'bPitchV')"></div>
+    <div class="sc-group sl" data-w-slider="bFiber"><label id="lbl-bFiber" for="bFiber">fiber radius</label><span class="sv" id="bFiberV">0.120</span><input type="range" id="bFiber" min="0.03" max="0.30" step="0.005" value="0.12" oninput="onP(this,'bFiberV')"></div>
+    <div class="sc-group sl" data-w-slider="bBlend"><label id="lbl-bBlend" for="bBlend">blend k</label><span class="sv" id="bBlendV">0.020</span><input type="range" id="bBlend" min="0.00" max="0.08" step="0.002" value="0.02" oninput="onP(this,'bBlendV')"></div>
   </div>
 
   <!-- WEAVE -->
   <div data-st="3">
-    <div class="sc-group sl" data-w-slider="wvR"><label for="wvR">fiber radius</label><span class="sv" id="wvRv">0.070</span><input type="range" id="wvR" min="0.02" max="0.25" step="0.005" value="0.07" oninput="onP(this,'wvRv')"></div>
-    <div class="sc-group sl" data-w-slider="wvP"><label for="wvP">pitch</label><span class="sv" id="wvPv">0.600</span><input type="range" id="wvP" min="0.20" max="1.50" step="0.01" value="0.60" oninput="onP(this,'wvPv')"></div>
-    <div class="sc-group sl" data-w-slider="wvA"><label for="wvA">amplitude</label><span class="sv" id="wvAv">0.140</span><input type="range" id="wvA" min="0.00" max="0.40" step="0.005" value="0.14" oninput="onP(this,'wvAv')"></div>
-    <div class="sc-group sl" data-w-slider="wvBlend"><label for="wvBlend">blend k</label><span class="sv" id="wvBlendv">0.010</span><input type="range" id="wvBlend" min="0.00" max="0.06" step="0.002" value="0.010" oninput="onP(this,'wvBlendv')"></div>
+    <div class="sc-group sl" data-w-slider="wvR"><label id="lbl-wvR" for="wvR">fiber radius</label><span class="sv" id="wvRv">0.070</span><input type="range" id="wvR" min="0.02" max="0.25" step="0.005" value="0.07" oninput="onP(this,'wvRv')"></div>
+    <div class="sc-group sl" data-w-slider="wvP"><label id="lbl-wvP" for="wvP">pitch</label><span class="sv" id="wvPv">0.600</span><input type="range" id="wvP" min="0.20" max="1.50" step="0.01" value="0.60" oninput="onP(this,'wvPv')"></div>
+    <div class="sc-group sl" data-w-slider="wvA"><label id="lbl-wvA" for="wvA">amplitude</label><span class="sv" id="wvAv">0.140</span><input type="range" id="wvA" min="0.00" max="0.40" step="0.005" value="0.14" oninput="onP(this,'wvAv')"></div>
+    <div class="sc-group sl" data-w-slider="wvBlend"><label id="lbl-wvBlend" for="wvBlend">blend k</label><span class="sv" id="wvBlendv">0.010</span><input type="range" id="wvBlend" min="0.00" max="0.06" step="0.002" value="0.010" oninput="onP(this,'wvBlendv')"></div>
   </div>
 </section>
 
@@ -457,7 +457,7 @@ select.fld option{background:var(--card);color:var(--ink)}
 
   <!-- BUNDLE -->
   <div data-st="0">
-    <div class="sc-group sl" data-w-slider="twistRate"><label for="twistRate">twist rate</label><span class="sv" id="twistRateV">1.200</span><input type="range" id="twistRate" min="0.0" max="4.0" step="0.05" value="1.20" oninput="onP(this,'twistRateV')"></div>
+    <div class="sc-group sl" data-w-slider="twistRate"><label id="lbl-twistRate" for="twistRate">twist rate</label><span class="sv" id="twistRateV">1.200</span><input type="range" id="twistRate" min="0.0" max="4.0" step="0.05" value="1.20" oninput="onP(this,'twistRateV')"></div>
     <div class="sc-group row" id="grp-twist">
       <label>twist mode</label>
       <div id="w-twist"></div>
@@ -476,8 +476,8 @@ select.fld option{background:var(--card);color:var(--ink)}
       </div>
     </div>
     <div id="warpSliders" hidden>
-      <div class="sc-group sl" data-w-slider="warpAmp"><label for="warpAmp">amplitude</label><span class="sv" id="warpAmpV">0.150</span><input type="range" id="warpAmp" min="0.00" max="0.40" step="0.005" value="0.15" oninput="onP(this,'warpAmpV')"></div>
-      <div class="sc-group sl" data-w-slider="warpFreq"><label for="warpFreq">frequency</label><span class="sv" id="warpFreqV">1.500</span><input type="range" id="warpFreq" min="0.30" max="4.00" step="0.05" value="1.50" oninput="onP(this,'warpFreqV')"></div>
+      <div class="sc-group sl" data-w-slider="warpAmp"><label id="lbl-warpAmp" for="warpAmp">amplitude</label><span class="sv" id="warpAmpV">0.150</span><input type="range" id="warpAmp" min="0.00" max="0.40" step="0.005" value="0.15" oninput="onP(this,'warpAmpV')"></div>
+      <div class="sc-group sl" data-w-slider="warpFreq"><label id="lbl-warpFreq" for="warpFreq">frequency</label><span class="sv" id="warpFreqV">1.500</span><input type="range" id="warpFreq" min="0.30" max="4.00" step="0.05" value="1.50" oninput="onP(this,'warpFreqV')"></div>
       <div class="sc-group row" id="grp-frame">
         <label>frame</label>
         <div id="w-frame"></div>
@@ -513,23 +513,23 @@ select.fld option{background:var(--card);color:var(--ink)}
 <section class="sec" id="sec-tiling" data-section="tiling">
   <h2 class="sec-h"><span class="sec-n">03</span>Tiling</h2>
   <div data-st="0">
-    <div class="sc-group sl" data-w-slider="bundleGap"><label for="bundleGap">column gap</label><span class="sv" id="bundleGapV">0.200</span><input type="range" id="bundleGap" min="-0.80" max="0.50" step="0.005" value="0.20" oninput="onP(this,'bundleGapV')"></div>
+    <div class="sc-group sl" data-w-slider="bundleGap"><label id="lbl-bundleGap" for="bundleGap">column gap</label><span class="sv" id="bundleGapV">0.200</span><input type="range" id="bundleGap" min="-0.80" max="0.50" step="0.005" value="0.20" oninput="onP(this,'bundleGapV')"></div>
   </div>
   <div data-st="1">
-    <div class="sc-group sl" data-w-slider="hBlend"><label for="hBlend">blend k</label><span class="sv" id="hBlendV">0.000</span><input type="range" id="hBlend" min="0.00" max="0.08" step="0.002" value="0.000" oninput="onP(this,'hBlendV')"></div>
-    <div class="sc-group sl" data-w-slider="hGap"><label for="hGap">column gap</label><span class="sv" id="hGapV">0.400</span><input type="range" id="hGap" min="-0.80" max="1.00" step="0.02" value="0.40" oninput="onP(this,'hGapV')"></div>
+    <div class="sc-group sl" data-w-slider="hBlend"><label id="lbl-hBlend" for="hBlend">blend k</label><span class="sv" id="hBlendV">0.000</span><input type="range" id="hBlend" min="0.00" max="0.08" step="0.002" value="0.000" oninput="onP(this,'hBlendV')"></div>
+    <div class="sc-group sl" data-w-slider="hGap"><label id="lbl-hGap" for="hGap">column gap</label><span class="sv" id="hGapV">0.400</span><input type="range" id="hGap" min="-0.80" max="1.00" step="0.02" value="0.40" oninput="onP(this,'hGapV')"></div>
   </div>
   <div data-st="2">
-    <div class="sc-group sl" data-w-slider="bGap"><label for="bGap">column gap</label><span class="sv" id="bGapV">0.300</span><input type="range" id="bGap" min="-0.80" max="1.00" step="0.02" value="0.30" oninput="onP(this,'bGapV')"></div>
+    <div class="sc-group sl" data-w-slider="bGap"><label id="lbl-bGap" for="bGap">column gap</label><span class="sv" id="bGapV">0.300</span><input type="range" id="bGap" min="-0.80" max="1.00" step="0.02" value="0.30" oninput="onP(this,'bGapV')"></div>
   </div>
   <div data-st="3">
-    <div class="sc-group sl" data-w-slider="wvZGap"><label for="wvZGap">layer gap</label><span class="sv" id="wvZGapv">0.050</span><input type="range" id="wvZGap" min="-0.30" max="0.60" step="0.01" value="0.05" oninput="onP(this,'wvZGapv')"></div>
+    <div class="sc-group sl" data-w-slider="wvZGap"><label id="lbl-wvZGap" for="wvZGap">layer gap</label><span class="sv" id="wvZGapv">0.050</span><input type="range" id="wvZGap" min="-0.30" max="0.60" step="0.01" value="0.05" oninput="onP(this,'wvZGapv')"></div>
   </div>
   <div id="zStepBlock" data-st="0 1 2">
     <div class="sub-h">z-step</div>
-    <div class="sc-group sl" data-w-slider="zRampX"><label for="zRampX">ramp X</label><span class="sv" id="zRampXV">0.000</span><input type="range" id="zRampX" min="-3.10" max="3.10" step="0.05" value="0.00" oninput="onP(this,'zRampXV')"></div>
-    <div class="sc-group sl" data-w-slider="zRampY"><label for="zRampY">ramp Y</label><span class="sv" id="zRampYV">0.000</span><input type="range" id="zRampY" min="-3.10" max="3.10" step="0.05" value="0.00" oninput="onP(this,'zRampYV')"></div>
-    <div class="sc-group sl" data-w-slider="zChkStep"><label for="zChkStep">checker step</label><span class="sv" id="zChkStepV">0.000</span><input type="range" id="zChkStep" min="-3.10" max="3.10" step="0.05" value="0.00" oninput="onP(this,'zChkStepV')"></div>
+    <div class="sc-group sl" data-w-slider="zRampX"><label id="lbl-zRampX" for="zRampX">ramp X</label><span class="sv" id="zRampXV">0.000</span><input type="range" id="zRampX" min="-3.10" max="3.10" step="0.05" value="0.00" oninput="onP(this,'zRampXV')"></div>
+    <div class="sc-group sl" data-w-slider="zRampY"><label id="lbl-zRampY" for="zRampY">ramp Y</label><span class="sv" id="zRampYV">0.000</span><input type="range" id="zRampY" min="-3.10" max="3.10" step="0.05" value="0.00" oninput="onP(this,'zRampYV')"></div>
+    <div class="sc-group sl" data-w-slider="zChkStep"><label id="lbl-zChkStep" for="zChkStep">checker step</label><span class="sv" id="zChkStepV">0.000</span><input type="range" id="zChkStep" min="-3.10" max="3.10" step="0.05" value="0.00" oninput="onP(this,'zChkStepV')"></div>
   </div>
 </section>
 
@@ -547,8 +547,8 @@ select.fld option{background:var(--card);color:var(--ink)}
     <label>side</label>
     <button id="btnFlip" class="sw" role="switch" aria-checked="false" data-native="toggle" onclick="onTopoFlip()"><span class="sw-t"></span><span>flip side</span></button>
   </div>
-  <div class="sc-group sl" id="sheetWidthRow" data-w-slider="sheetWidth" data-need="Sheet mode" hidden><label for="sheetWidth">sheet width</label><span class="sv" id="sheetWidthV">0.025</span><input type="range" id="sheetWidth" min="0.005" max="0.08" step="0.002" value="0.025" oninput="onP(this,'sheetWidthV')"></div>
-  <div class="sc-group sl" data-w-slider="isoOffset"><label for="isoOffset">iso offset</label><span class="sv" id="isoOffsetV">0.000</span><input type="range" id="isoOffset" min="-0.15" max="0.15" step="0.002" value="0.00" oninput="onP(this,'isoOffsetV')"></div>
+  <div class="sc-group sl" id="sheetWidthRow" data-w-slider="sheetWidth" data-need="Sheet mode" hidden><label id="lbl-sheetWidth" for="sheetWidth">sheet width</label><span class="sv" id="sheetWidthV">0.025</span><input type="range" id="sheetWidth" min="0.005" max="0.08" step="0.002" value="0.025" oninput="onP(this,'sheetWidthV')"></div>
+  <div class="sc-group sl" data-w-slider="isoOffset"><label id="lbl-isoOffset" for="isoOffset">iso offset</label><span class="sv" id="isoOffsetV">0.000</span><input type="range" id="isoOffset" min="-0.15" max="0.15" step="0.002" value="0.00" oninput="onP(this,'isoOffsetV')"></div>
 </section>
 
 <section class="sec" id="sec-analyze" data-section="analyze">
@@ -2113,7 +2113,7 @@ if(window.ResizeObserver)new ResizeObserver(requestRender).observe(document.getE
 </script>
 
 <script id="liquid-ui">
-/* liquid-ui (mshomper/liquid-ui @ dcb3106) — core + widgets bundle. Do not edit here; edit the kit and rebuild. */
+/* liquid-ui (mshomper/liquid-ui @ f79aeaf) — core + widgets bundle. Do not edit here; edit the kit and rebuild. */
 /* ============================================================================
    Liquid UI core — SDF-shaded "liquid" controls for the web.
    One shared WebGL context renders every component into its own 2D canvas.
@@ -3499,6 +3499,7 @@ Liquid.ui = Liquid.ui || {}; Liquid.uiDemo = Liquid.uiDemo || [];
   transition: opacity 160ms ease-out, filter 160ms ease-out, transform 160ms ease-out, color 160ms ease-out; }
 .lq-ws-lab{ position:absolute; left:50%; transform:translate(-50%,-50%); font-size:11px; font-weight:650; letter-spacing:.01em; white-space:nowrap;
   transition: color 160ms ease-out; }
+.lq-ws-tab.dis .lq-ws-ic, .lq-ws-tab.dis .lq-ws-lab{ opacity:.5; }   /* disabled item: dimmed, still opens */
 .lq-ws-tab.near .lq-ws-ic{ color:${INK}; }
 .lq-ws-tab.lifted .lq-ws-lab{ color:oklch(var(--al) var(--ac) var(--ah)); }
 .lq-ws.h .lq-ws-tab.lifted .lq-ws-ic{ opacity:0; filter:blur(4px); transform:translateY(-12px) scale(.7); }
@@ -3533,6 +3534,7 @@ Liquid.ui = Liquid.ui || {}; Liquid.uiDemo = Liquid.uiDemo || [];
     if (!opts.badgeAccent && Math.abs(base.h - badgeAcc.h) < 30) badgeAcc = Liquid.ACCENTS.amber;
     const idx = id => T.findIndex(t => t.id === id);
     let target = Math.max(0, idx(opts.value)), disabled = false, ready = false;
+    const dis = T.map(t => !!t.disabled);   // per-item disabled: dimmed (tab and bead), aria-disabled, but still selectable
 
     const G = horiz
       ? { M: 2, R: 22, gap: 5, barT: 24, barH: 58, corner: 22, iconOff: 21, labOff: 43, H: 84 }
@@ -3666,6 +3668,8 @@ void accentAt(vec2 p, inout vec3 A, inout vec3 AD){   // each pixel takes the co
       surf.set('uCorner', G.corner).set('uRn', G.R + G.gap).set('uR', G.R).set('uScale', sc);
       const f = Math.min(Math.max((head.x - G.cs[0]) / G.slotW, 0), N - 1), i0 = Math.floor(f), i1 = Math.min(i0 + 1, N - 1);
       surf.setAccent(Liquid.mixAccent(accOf(i0), accOf(i1), f - i0));
+      const dm = (dis[i0] ? 0.5 : 1) * (1 - (f - i0)) + (dis[i1] ? 0.5 : 1) * (f - i0);   // bead dims as it rides over a disabled item
+      surf.setAccentOpacity(dm); bead.style.opacity = dm;
       surf.draw();
       bead.style.transform = `translate(${bx}px, ${by}px) scale(${sc})`;
       const n = nearest(head.x);
@@ -3775,6 +3779,13 @@ void accentAt(vec2 p, inout vec3 A, inout vec3 AD){   // each pixel takes the co
       els[i].setAttribute('aria-label', v === 'dot' ? `${t}, new` : (typeof v === 'number' && v > 0) ? `${t}, ${v}` : t);
     }
     T.forEach((_, i) => label(i));
+    function markDis(i) { els[i].classList.toggle('dis', dis[i]); if (dis[i]) els[i].setAttribute('aria-disabled', 'true'); else els[i].removeAttribute('aria-disabled'); }
+    T.forEach((_, i) => markDis(i));
+    // setItemState(id, { disabled }): dim / restore one item. It stays focusable and selectable (the app shows a note).
+    function setItemState(id, { disabled: d } = {}) {
+      const i = idx(id); if (i < 0 || d === undefined || dis[i] === !!d) return;
+      dis[i] = !!d; markDis(i); anim.wake(); write();
+    }
 
     // setBadge(id, value, { accent }): value = number | 'dot' | null; accent (per call) defaults to the badge accent
     function setBadge(id, v, { accent } = {}) {
@@ -3811,7 +3822,7 @@ void accentAt(vec2 p, inout vec3 A, inout vec3 AD){   // each pixel takes the co
         } else select(i, false, false);
         if (!silent && opts.onChange) opts.onChange(T[i].id);
       },
-      setBadge,
+      setBadge, setItemState,
       setDisabled(b) { disabled = !!b; host.setAttribute('aria-disabled', disabled); els.forEach(el => { el.disabled = disabled; }); },
       redraw: write,
       destroy() {
@@ -4524,7 +4535,7 @@ Liquid.ui = Liquid.ui || {}; Liquid.uiDemo = Liquid.uiDemo || [];
 .lq-sl-val{ position:relative; flex:none; pointer-events:auto; background:none; border:0; margin:0; padding:0 2px; border-radius:5px;
   font:inherit; font-family:${MONO}; font-size:13px; line-height:18px; font-variant-numeric:tabular-nums; color:${INK};
   cursor:text; white-space:nowrap; transition:color 140ms ease-out; }
-.lq-sl-val::before{ content:''; position:absolute; left:-14px; right:-8px; top:-4px; bottom:-22px; }
+.lq-sl-val::before{ content:''; position:absolute; right:-8px; width:max(calc(100% + 22px), 52px); top:-4px; bottom:-22px; }   /* hit area >= 44 x 44 even for 1-char values (the value sits at the host's right edge, which clips the 8 px; it grows leftwards) */
 .lq-sl-val:focus-visible{ outline:none; box-shadow:0 0 0 2px oklch(var(--al) var(--ac) var(--ah) / .45); }
 .lq-sl-unit{ margin-left:.35em; color:${DIM}; }
 .lq-sl.grab .lq-sl-num{ color:${ACC}; }
@@ -5199,7 +5210,6 @@ float floodSDF(vec2 p){
     }
   });
 })();
-
 </script>
 <style id="f13ui-style">
 /* ============================================================================
@@ -5240,7 +5250,7 @@ html.f13w .f13w-slider{width:100%}
 html.f13w .sl>.row-extra{margin-top:2px}
 .f13w-lab{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:6px}
 .f13w-lab>label{font-size:13px;font-weight:550;line-height:18px;color:var(--ink-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.lq-sl-head .f13h-i{pointer-events:auto;flex:none}
+.lq-sl-head .f13h-i{pointer-events:auto;flex:none;z-index:3}   /* z: its 44px hit box sits above the track's hit box */
 /* fraction labels (⅛ ¼ …): mono faces lack the glyphs, so use the UI face for those sliders */
 .f13w-frac .lq-sl-num{font-family:var(--lq-font);font-size:15px}
 
@@ -5259,7 +5269,9 @@ html.f13w #w-clip>.clip-lbl{margin:0}
 
 /* sections */
 html.f13w #sectionsRail>.f13w-rail{margin:14px 0 0 4px}
-html.f13w .sb-fallback{display:none}
+html.f13w .sb-fallback,html.f13w #sectionsRail .sb-fallback,html.f13w #sectionsBar .sb-fallback{display:none}   /* id rules in a tool's stage-2 CSS would otherwise win */
+/* the clip overlay's native pills give way to the clip radio (the wire reuses its .clip-lbl) */
+html.f13w.f13w-clip #clipOverlay{display:none}
 html.f13w #sectionsBar{border-top:none;padding:0 8px env(safe-area-inset-bottom)}
 
 /* help: "show" jumps from a drawer card to its control */
@@ -5286,10 +5298,7 @@ html.f13w #termlist .sw.tog{display:none}           rebuilt rows: hide natives b
 html.f13w .sc-group.row>.f13w-tg-sw,html.f13w .sc-group.row>.f13w-dd-c{margin-left:auto}
 html.f13w .sc-group.row>.f13w-seg{max-width:260px;margin-left:auto}
 html.f13w #sec-structure>.f13w-dd{margin-bottom:6px}
-html.f13w .f13w-rail button.f13w-dim,html.f13w .f13w-bar button.f13w-dim{opacity:.55}
-html.f13w #sectionsRail .sb-fallback,html.f13w #sectionsBar .sb-fallback{display:none}   /* stage 2 tabs: the liquid rail / bar replaces them */
 @media (max-width:430px){html.f13w .fh-version{display:none}}   /* the Recipe menu needs the room at 390 */
-html.f13w #clipOverlay{display:none}
 html.f13w #w-clip>.clip-lbl{display:inline-flex;align-items:center;font-size:11px;color:var(--ink-faint)}
 </style>
 <script id="f13ui-wire">
@@ -5306,12 +5315,17 @@ html.f13w #w-clip>.clip-lbl{display:inline-flex;align-items:center;font-size:11p
    Only the CONFIG block changes per tool. Requires: liquid-ui bundle, layout.js (window.F13UI).
    No WebGL → nothing mounts, html.f13w is never set, the native controls remain.
    ========================================================================== */
-(function(){
+(function F13Wire(){
   'use strict';
+  /* Init timing: wait for the DOM (and one task after DOMContentLoaded, so handlers the app registered
+     later have run). Tools no longer reorder their code; a view menu built later still gets mounted below. */
+  if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',()=>setTimeout(F13Wire,0),{once:true});return;}
   if(typeof Liquid==='undefined'||!Liquid.ok||!Liquid.ui)return;
+  if(window.F13UI&&window.F13UI.w&&window.F13UI.w.__wired)return;
   const $=id=>document.getElementById(id);
   const UI=window.F13UI=window.F13UI||{};
   const W=UI.w={};                                                   // mounted widgets (scripts/tests)
+  Object.defineProperty(W,'__wired',{value:true});
 
   /* ============ PER-TOOL CONFIG ======================================== */
   const CONFIG={
@@ -5405,7 +5419,11 @@ html.f13w #w-clip>.clip-lbl{display:inline-flex;align-items:center;font-size:11p
     quiet=mirrorValue(inp,HTMLInputElement.prototype,v=>w.set(+v));
     if(lab){                                                         // the row's own <label> becomes the widget label (help "i" stays beside it)
       const ks=host.querySelector('.lq-sl-label'),wrap=document.createElement('span');
-      wrap.className='f13w-lab';lab.id=ks.id;ks.removeAttribute('id');lab.removeAttribute('for');
+      wrap.className='f13w-lab';
+      if(lab.id){                                                    // the app / help engine address the label by id: keep it, point the widget's aria-labelledby at it
+        host.querySelectorAll('[aria-labelledby~="'+ks.id+'"]').forEach(e=>e.setAttribute('aria-labelledby',e.getAttribute('aria-labelledby').split(/\s+/).map(t=>t===ks.id?lab.id:t).join(' ')));
+      }else lab.id=ks.id;
+      ks.removeAttribute('id');lab.removeAttribute('for');
       wrap.appendChild(lab);ks.replaceWith(wrap);
     }
     if(hintEl)watch(hintEl,()=>w.setHint(hintOf()));
@@ -5476,14 +5494,27 @@ html.f13w #w-clip>.clip-lbl{display:inline-flex;align-items:center;font-size:11p
     W[s.id||s.btn]=w;
   });
   // shared view menu: checkbox rows → label-first toggles; its reset sets .checked silently, so resync after it
-  const vp=CONFIG.viewMenu&&document.querySelector('#cw .f13v-p');
-  W.view=vp?[...vp.querySelectorAll('input[type=checkbox]')].map(cb=>{
-    const row=cb.closest('label')||cb,host=tgHost('f13w-tg-menu');
-    row.before(host);row.setAttribute('data-native','toggle');
-    return {cb,w:Liquid.ui.toggle(host,{...TG,checked:cb.checked,label:row.textContent.trim(),labelFirst:true,
-      onChange:v=>{cb.checked=v;fire(cb,'change');}})};
-  }):[];
-  if(vp){const r=vp.querySelector('.f13v-r');if(r)r.addEventListener('click',()=>W.view.forEach(({cb,w})=>w.set(cb.checked)));}
+  W.view=[];
+  function mountView(){                                              // true once the menu exists and is mounted
+    const vp=document.querySelector('#cw .f13v-p');if(!vp)return false;
+    const cbs=[...vp.querySelectorAll('input[type=checkbox]')].filter(cb=>!cb.closest('[data-native]'));if(!cbs.length)return false;
+    cbs.forEach(cb=>{
+      const row=cb.closest('label')||cb,host=tgHost('f13w-tg-menu');
+      row.before(host);row.setAttribute('data-native','toggle');
+      W.view.push({cb,w:Liquid.ui.toggle(host,{...TG,checked:cb.checked,label:row.textContent.trim(),labelFirst:true,
+        onChange:v=>{cb.checked=v;fire(cb,'change');}})});
+    });
+    const r=vp.querySelector('.f13v-r');if(r)r.addEventListener('click',()=>W.view.forEach(({cb,w})=>w.set(cb.checked)));
+    return true;
+  }
+  if(CONFIG.viewMenu&&!mountView()){                                 // the menu may be built after us (the shared script, or the app's own handler): watch briefly
+    const mo=new MutationObserver(()=>{if(mountView())stop();});
+    const stop=()=>{mo.disconnect();clearTimeout(tm);window.removeEventListener('load',onLoad);};
+    const onLoad=()=>{if(mountView())stop();};
+    const tm=setTimeout(stop,5000);
+    mo.observe(document.documentElement,{childList:true,subtree:true});
+    window.addEventListener('load',onLoad);
+  }
 
   // ---- run → progress button (synchronous solvers: busy slosh, then flood when results land) ----
   let running=false;
@@ -5503,9 +5534,9 @@ html.f13w #w-clip>.clip-lbl{display:inline-flex;align-items:center;font-size:11p
   // ---- clip radio (axis accents; tap the active axis to release) ----
   if(CONFIG.clip&&$(CONFIG.clip.host)){
     const c=CONFIG.clip,host=$(c.host);
-    // the native overlay's own label (the help (i) anchors on it: card anchor '#w-clip .clip-lbl') moves into the widget
-    const lbl=document.querySelector('#clipOverlay .clip-lbl')||Object.assign(document.createElement('span'),{className:'clip-lbl',textContent:'clip'});
-    host.textContent='';host.append(lbl,document.createElement('div'));
+    const lbl=host.querySelector('.clip-lbl')||document.querySelector('#clipOverlay .clip-lbl')||Object.assign(document.createElement('span'),{className:'clip-lbl',textContent:'clip'});
+    host.textContent='';host.append(lbl,document.createElement('div'));   // an existing label (and its styling) is reused
+    document.documentElement.classList.add('f13w-clip');                  // hides the native #clipOverlay pills
     const AX=['x','y','z'];
     W.clip=Liquid.ui.radio(host.lastChild,{options:AX.map((a,i)=>({value:i+1,label:a.toUpperCase(),accent:Liquid.ACCENTS['axis'+a.toUpperCase()]})),
       value:c.get()||null,allowNone:true,orientation:'horizontal',size:'sm',ariaLabel:'Clip plane',
@@ -5556,23 +5587,20 @@ html.f13w #w-clip>.clip-lbl{display:inline-flex;align-items:center;font-size:11p
 
   // ---- sections: rail (desktop) + tab bar (phone), results badge ----
   function mk(parent,cls){const d=document.createElement('div');d.className=cls;parent.appendChild(d);return d;}
-  // section icons: reuse the drawn icons of the stage 2 fallback tabs (strands, twist, cell, volume)
-  CONFIG.sections.forEach(s=>{
-    const svg=document.querySelector('#sectionsBar [data-section="'+s.id+'"] svg');
+  CONFIG.sections.forEach(s=>{                                       // a section icon not in Liquid.ICONS: reuse the fallback tab's drawn svg
+    const svg=document.querySelector('.sb-fallback [data-section="'+s.id+'"] svg,#sectionsBar [data-section="'+s.id+'"] svg');
     if(svg&&!Liquid.ICONS[s.icon])Liquid.ICONS[s.icon]=svg.innerHTML;
   });
   W.rail=Liquid.ui.sections(mk($('sectionsRail'),'f13w-rail'),{items:CONFIG.sections,value:UI.active,orientation:'vertical',
     accent:ACC,ariaLabel:'Sections',onChange:id=>UI.showSection(id)});
   W.bar=Liquid.ui.sections(mk($('sectionsBar'),'f13w-bar'),{items:CONFIG.sections,value:UI.active,orientation:'horizontal',
     accent:ACC,ariaLabel:'Sections',onChange:id=>UI.showSection(id)});
-  // Weave has no twist controls: the Twist tab stays (it shows the note) but is dimmed, as the stage 2 fallback tabs were
-  function dimTwist(s){
-    document.querySelectorAll('#sectionsRail .f13w-rail button,#sectionsBar .f13w-bar button').forEach(b=>{
-      if(/^Twist\b/.test(b.getAttribute('aria-label')||''))b.classList.toggle('f13w-dim',s===3);
-    });
-  }
-  hook('onStructure',dimTwist);dimTwist(+document.documentElement.dataset.s);
-  let badge=null;                                                    // 'running' | 'new' | 'stale' | null
+  // per-section disabled: dimmed, still opens (the section shows its own note). CONFIG.sections[i].disabled for the initial state.
+  UI.setSectionDisabled=(id,on)=>{W.rail.setItemState(id,{disabled:!!on});W.bar.setItemState(id,{disabled:!!on});};
+  // Weave has no twist controls: the Twist tab stays (it shows the note) but is dimmed
+  hook('onStructure',()=>UI.setSectionDisabled('twist',+document.documentElement.dataset.s===3));
+  UI.setSectionDisabled('twist',+document.documentElement.dataset.s===3);
+  let badge=null;                                                   // 'running' | 'new' | 'stale' | null
   const A=CONFIG.analyzeSection;
   function setBadge(b){if(!A)return;badge=b;const v=b?'dot':null,o={accent:b==='stale'?'amber':'coral'};W.rail.setBadge(A,v,o);W.bar.setBadge(A,v,o);}
   const seen=()=>UI.active===A;
@@ -5588,8 +5616,14 @@ html.f13w #w-clip>.clip-lbl{display:inline-flex;align-items:center;font-size:11p
     const el=typeof sel==='string'?document.querySelector(sel):sel;if(!el)return false;
     const sec=UI.sectionOf(el);if(sec)UI.showSection(sec);
     if(UI.isPhone()&&UI.setSheet)UI.setSheet('full');
-    if(!el.getClientRects().length)return false;
-    const row=el.closest('.sc-group')||el;
+    // natives are hidden ([data-native]): land on the visible row, else the widget mounted beside the native, else the nearest visible ancestor
+    const vis=n=>!!(n&&n.getClientRects().length);
+    let row=el.closest('.sc-group')||el;
+    if(!vis(row)){
+      const sib=[el.nextElementSibling,el.previousElementSibling].find(n=>n&&/(^|\s)f13w-/.test(n.className)&&vis(n));
+      row=sib||(()=>{let n=el.parentElement;while(n&&!vis(n))n=n.parentElement;return n&&n!==document.body&&n!==document.documentElement?n:null;})();
+    }
+    if(!row)return false;
     row.scrollIntoView({block:'center',behavior:Liquid.state.reduce?'auto':'smooth'});
     row.classList.remove('f13w-flash');void row.offsetWidth;row.classList.add('f13w-flash');
     setTimeout(()=>row.classList.remove('f13w-flash'),1400);
@@ -6149,6 +6183,16 @@ html.f13w #w-clip>.clip-lbl{display:inline-flex;align-items:center;font-size:11p
       });
     }
     UI.helpTargets=HELP_TARGET;
+    // The wire now mounts after DOMContentLoaded (+1 task), i.e. after this script ran, and then replaces UI.revealControl.
+    // Once it has, take its function as wireReveal and put this structure-aware wrapper back on top.
+    var stage2Reveal=UI.revealControl;
+    // The help engine also ran before the wire: it put each slider row's (i) after the row's labelled <label>, and the wire
+    // moved only the label into the widget, leaving the (i) hidden in the row. Move each (i) back beside its label.
+    function adoptWire(){
+      if(UI.revealControl!==stage2Reveal){ wireReveal=UI.revealControl; UI.revealControl=stage2Reveal; }
+      document.querySelectorAll('.sc-group.sl[data-w-slider]>.f13h-i').forEach(function(b){ var l=b.parentNode.querySelector('.f13w-lab'); if(l) l.appendChild(b); });
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ setTimeout(adoptWire,0); }); else adoptWire();
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){ setTimeout(addShowButtons,0); }); else setTimeout(addShowButtons,0);
   })();
   </script>
