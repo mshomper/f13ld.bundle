@@ -1,0 +1,24 @@
+# F13LD.bundle — UI refresh log
+
+| Stage | Date | Branch | Commit | Checks | Open decisions |
+|---|---|---|---|---|---|
+| 1 · audit | 2026-11-25 | `ui-refresh` | none yet (base `d833c3c`, v0.4.0) | Audit + 11 screenshots (`docs/ui-audit/`). No h-scroll at 390/700/1024/1440. 0 compiles per slider drag. 76 controls + 35 help (i) mapped. | Accent (lilac `oklch(0.78 0.14 300)` vs cyan); section map and Weave's empty Twist tab; remove quality buttons; homogenization in exports after edits; clear homog on import; clip help (i) 35→36; help "show" for other-structure controls; hide warp rows when Off. |
+
+## Decisions (Matt, 2026-11-25)
+
+Shared, all wave 1 tools:
+- **Quality:** automatic, as in TPMS. Remove the manual quality control (buttons or slider); its help (i) goes with it.
+- **Stale analysis:** clear homogenization / stiffness results when the design changes, and on import. Exports carry results only for the current design.
+- **Missing help cards:** add them; the (i) count rises by that number (record the new count).
+- **Field sliders that re-bake:** show a low-res preview bake while dragging, full bake on release. Keep it only if it measures faster to first change than today and does not slow the full bake.
+- **Accent:** derived from the tool colour in the F13LD brand guidelines v2.0 (hue kept, lifted to L 0.80 for the dark UI). Final value pending Matt.
+
+This tool:
+- **Accent (proposed):** purple `oklch(0.80 0.13 308)` ≈ `#d5a6fe`, from brand stroke `#7B4F9E`.
+- **Quality buttons:** removed (automatic).
+- **Missing section-plane (i):** add it; 35 → 36.
+- **Stale homogenization:** cleared on design change and on import.
+
+- Sections Structure · Twist · Tiling · Solid · Analyze. Weave: Twist section disabled with a one-line note. Help "show" for another structure says which structure it belongs to (no structure switch). Warp sliders hidden when warp is Off.
+
+Stage 1 approved by Matt 2026-11-25 ("use your picks").
