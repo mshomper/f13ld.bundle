@@ -132,15 +132,12 @@ select{cursor:pointer}
 #cw .f13v-p label{font-size:13px;color:var(--ink);min-height:36px}
 #cw .f13v-p input{width:16px;height:16px;accent-color:var(--accent)}
 #cw .f13v-p .f13v-r{font:400 13px var(--lq-font);color:var(--ink-dim);border:1px solid var(--hair-strong);border-radius:8px;padding:6px 12px}
-/* shader pill, quality switch and error status (renderer stage replaces these) */
+/* shader pill and error status (quality is automatic: no switch) */
 #indicators{position:absolute;top:10px;right:10px;display:none;flex-direction:column;align-items:flex-end;gap:6px;pointer-events:none;z-index:10}
 .ind-pill{display:flex;align-items:center;gap:6px;height:28px;padding:0 10px;background:oklch(0.13 0.012 265 / 0.82);border:1px solid var(--hair);border-radius:999px;font-size:11px;white-space:nowrap}
 .ind-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .ind-label{color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.06em}
 #labelShader{font-size:11px}
-#qualityOverlay{position:absolute;right:10px;bottom:10px;z-index:14;gap:2px;padding:2px;background:oklch(0.13 0.012 265 / 0.82);border:1px solid var(--hair);border-radius:14px;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-#qualityOverlay button{min-width:44px;height:44px;padding:0 8px;border:0;border-radius:12px;background:transparent;color:var(--ink-dim);font:500 13px var(--lq-font)}
-#qualityOverlay button.active{color:var(--accent);background:oklch(1 0 0 / 0.06)}
 #status{position:absolute;right:10px;bottom:70px;z-index:10;padding:6px 10px;background:oklch(0.13 0.012 265 / 0.82);border:1px solid var(--hair);border-radius:10px;font-size:13px;color:var(--ink-dim);pointer-events:none}
 #status:not([style]){display:none}
 
@@ -365,11 +362,6 @@ select.fld option{background:var(--card);color:var(--ink)}
       <span class="ind-label">shader</span>
       <span id="labelShader" style="color:#22d3ee">ready</span>
     </div>
-  </div>
-  <div id="qualityOverlay" style="display:none">
-    <button id="btnQLow" class="active" onclick="onQuality('low')">Low</button>
-    <button id="btnQMed" onclick="onQuality('medium')">Med</button>
-    <button id="btnQHigh" onclick="onQuality('high')">High</button>
   </div>
 </div>
 </section>
@@ -736,7 +728,7 @@ function f13ViewInit(cfg){
 // ==== /F13LD-VIEW ====
 var f13View=null;
 // STATE
-var currentQuality='low';var clipState={axis:0,pos:0.0,side:1};
+var clipState={axis:0,pos:0.0,side:1};
 var debounceTimer=null,slicePos=0.5;
 var structure=0;
 var twistMode=0,warpMode=0,warpFrame=0,beamShape='circle';
@@ -745,7 +737,7 @@ var bN=3,bColHand=0;
 var topoMode=0,topoFlip=0;
 function shapeN(){return beamShape==='circle'?2:beamShape==='rounded'?4:16;}
 function getParams(){return{
-  structure:structure,quality:currentQuality,
+  structure:structure,
   r:parseFloat(document.getElementById('beamR').value),
   n:shapeN(),
   d:parseFloat(document.getElementById('beamD').value),
@@ -973,20 +965,26 @@ function Raymarcher(canvas){
   var vp=canvas.parentElement;
   canvas.width=Math.max(vp?vp.clientWidth:300,1);
   canvas.height=Math.max(vp?vp.clientHeight:300,1);
-  this.gl=canvas.getContext('webgl2',{preserveDrawingBuffer:true})||canvas.getContext('webgl',{preserveDrawingBuffer:true});
-  if(!this.gl){document.getElementById('status').textContent='WebGL not supported';return;}
-  var gl=this.gl;
-  this._khr=gl.getExtension('KHR_parallel_shader_compile')||null;
-  this._pendingProg=null;this._compiling=false;this._rebuildPending=false;
-  this.prog=null;this.running=false;this._loopRunning=false;this._dirty=true;
+  // antialias:false: it does nothing for a ray-marched quad and blitting into an MSAA canvas errors.
+  // preserveDrawingBuffer stays on: F13LD_snapshot (queue thumbnail) reads the canvas at any time.
+  this.gl=canvas.getContext('webgl2',{antialias:false,preserveDrawingBuffer:true});
+  if(!this.gl){document.getElementById('status').textContent='WebGL 2 not supported';return;}
+  this.running=false;this.lost=false;this._drag=false;this._scrub=false;
   this.currentParams=null;this.camZoom=14;this.autoRot=false;
   this.rotMat=this._mat3Mul(this._rotAA(0,1,0,0.6),this._rotAA(1,0,0,0.45));
-  this.u={};
+  this._initResources();
+  this._setupInteraction();
+}
+// GL objects: made once, and again after a lost context is restored (the context object is the same).
+Raymarcher.prototype._initResources=function(){
+  var gl=this.gl;
+  this._khr=gl.getExtension('KHR_parallel_shader_compile')||null;
+  this._pendingProg=null;this._compiling=false;this._srcKey=null;
+  this.prog=null;this.u={};
   this.quadBuf=gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER,this.quadBuf);
   gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
-  this._setupInteraction();
-}
+};
 Raymarcher.prototype._rotAA=function(ax,ay,az,angle){var c=Math.cos(angle),s=Math.sin(angle),t2=1-c,l=Math.sqrt(ax*ax+ay*ay+az*az)||1;ax/=l;ay/=l;az/=l;return[t2*ax*ax+c,t2*ax*ay+s*az,t2*ax*az-s*ay,t2*ax*ay-s*az,t2*ay*ay+c,t2*ay*az+s*ax,t2*ax*az+s*ay,t2*ay*az-s*ax,t2*az*az+c];};
 Raymarcher.prototype._mat3Mul=function(A,B){var r=new Array(9);for(var c=0;c<3;c++)for(var row=0;row<3;row++)r[c*3+row]=A[0*3+row]*B[c*3+0]+A[1*3+row]*B[c*3+1]+A[2*3+row]*B[c*3+2];return r;};
 Raymarcher.prototype._orthonorm=function(m){function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}function scl(a,s){return[a[0]*s,a[1]*s,a[2]*s];}function sub(a,b){return[a[0]-b[0],a[1]-b[1],a[2]-b[2]];}function nrm(a){var l=Math.sqrt(dot(a,a))||1;return[a[0]/l,a[1]/l,a[2]/l];}var x=[m[0],m[1],m[2]],y=[m[3],m[4],m[5]],z=[m[6],m[7],m[8]];x=nrm(x);y=nrm(sub(y,scl(x,dot(y,x))));z=nrm(sub(sub(z,scl(x,dot(z,x))),scl(y,dot(z,y))));return[x[0],x[1],x[2],y[0],y[1],y[2],z[0],z[1],z[2]];};
@@ -994,23 +992,25 @@ Raymarcher.prototype._applyDelta=function(dx,dy){
   if(Math.abs(dx)>0.001){
     var ux=this.rotMat[3],uy=this.rotMat[4],uz=this.rotMat[5];
     this.rotMat=this._mat3Mul(this._rotAA(ux,uy,uz,-dx*0.007),this.rotMat);
-    this._dirty=true;
+    kick();
   }
   if(Math.abs(dy)>0.001){
     var rx=this.rotMat[0],ry=this.rotMat[1],rz=this.rotMat[2];
     this.rotMat=this._mat3Mul(this._rotAA(rx,ry,rz,-dy*0.007),this.rotMat);
-    this._dirty=true;
+    kick();
   }
 };
-Raymarcher.prototype._setupInteraction=function(){var self=this,drag=false,scrub=false,lx=0,ly=0;function hitHandle(cx,cy){var hs=window.__clipHandleScreen;if(!hs)return false;var rect=self.canvas.getBoundingClientRect();return Math.hypot((cx-rect.left)-hs.x,(cy-rect.top)-hs.y)<16;}function applyScrub(cx,cy){var hs=window.__clipHandleScreen;if(!hs)return;var pd=(cx-lx)*hs.dirx+(cy-ly)*hs.diry;var dPos=(pd*(hs.axisStep/(hs.len||1)))/Math.PI;clipState.pos=Math.max(-1.0,Math.min(1.0,clipState.pos+dPos));self._dirty=true;}this.canvas.onmousedown=function(e){lx=e.clientX;ly=e.clientY;self.autoRot=false;if(hitHandle(e.clientX,e.clientY)){scrub=true;}else{drag=true;}};window.addEventListener('mouseup',function(){drag=false;scrub=false;});window.addEventListener('mousemove',function(e){if(scrub){applyScrub(e.clientX,e.clientY);lx=e.clientX;ly=e.clientY;}else if(drag){self._applyDelta(e.clientX-lx,e.clientY-ly);lx=e.clientX;ly=e.clientY;}});this.canvas.addEventListener('touchstart',function(e){lx=e.touches[0].clientX;ly=e.touches[0].clientY;self.autoRot=false;if(hitHandle(e.touches[0].clientX,e.touches[0].clientY)){scrub=true;}else{drag=true;}e.preventDefault();},{passive:false});window.addEventListener('touchend',function(){drag=false;scrub=false;});window.addEventListener('touchmove',function(e){if(scrub){applyScrub(e.touches[0].clientX,e.touches[0].clientY);lx=e.touches[0].clientX;ly=e.touches[0].clientY;e.preventDefault();}else if(drag){self._applyDelta(e.touches[0].clientX-lx,e.touches[0].clientY-ly);lx=e.touches[0].clientX;ly=e.touches[0].clientY;e.preventDefault();}},{passive:false});this.canvas.addEventListener('wheel',function(e){self.camZoom=Math.max(6,Math.min(38,self.camZoom+e.deltaY*0.02));self._dirty=true;e.preventDefault();},{passive:false});};
+Raymarcher.prototype._setupInteraction=function(){var self=this,lx=0,ly=0;function hitHandle(cx,cy){var hs=window.__clipHandleScreen;if(!hs)return false;var rect=self.canvas.getBoundingClientRect();return Math.hypot((cx-rect.left)-hs.x,(cy-rect.top)-hs.y)<16;}function applyScrub(cx,cy){var hs=window.__clipHandleScreen;if(!hs)return;var pd=(cx-lx)*hs.dirx+(cy-ly)*hs.diry;var dPos=(pd*(hs.axisStep/(hs.len||1)))/Math.PI;clipState.pos=Math.max(-1.0,Math.min(1.0,clipState.pos+dPos));kick();}this.canvas.onmousedown=function(e){lx=e.clientX;ly=e.clientY;self.autoRot=false;if(hitHandle(e.clientX,e.clientY)){self._scrub=true;}else{self._drag=true;}kick();};window.addEventListener('mouseup',function(){if(self._drag||self._scrub)kick();self._drag=false;self._scrub=false;});window.addEventListener('mousemove',function(e){if(self._scrub){applyScrub(e.clientX,e.clientY);lx=e.clientX;ly=e.clientY;}else if(self._drag){self._applyDelta(e.clientX-lx,e.clientY-ly);lx=e.clientX;ly=e.clientY;}});this.canvas.addEventListener('touchstart',function(e){lx=e.touches[0].clientX;ly=e.touches[0].clientY;self.autoRot=false;if(hitHandle(e.touches[0].clientX,e.touches[0].clientY)){self._scrub=true;}else{self._drag=true;}kick();e.preventDefault();},{passive:false});window.addEventListener('touchend',function(){if(self._drag||self._scrub)kick();self._drag=false;self._scrub=false;});window.addEventListener('touchmove',function(e){if(self._scrub){applyScrub(e.touches[0].clientX,e.touches[0].clientY);lx=e.touches[0].clientX;ly=e.touches[0].clientY;e.preventDefault();}else if(self._drag){self._applyDelta(e.touches[0].clientX-lx,e.touches[0].clientY-ly);lx=e.touches[0].clientX;ly=e.touches[0].clientY;e.preventDefault();}},{passive:false});this.canvas.addEventListener('wheel',function(e){self.camZoom=Math.max(6,Math.min(38,self.camZoom+e.deltaY*0.02));kick();e.preventDefault();},{passive:false});};
 
-Raymarcher.prototype._buildFrag=function(quality){
-  var iters=quality==='high'?380:quality==='medium'?220:110;
+// The step limit and hit threshold are uniforms (uSteps, uThresh), so render quality never changes the source.
+Raymarcher.prototype._buildFrag=function(){
   var lines=[
   '#version 300 es',
   'precision highp float;',
   'out vec4 fragColor;',
   'uniform vec2  uRes;',
+  'uniform int   uSteps;',
+  'uniform float uThresh;',
   'uniform mat3  uRot;',
   'uniform float uZoom;',
   'uniform float uClipAxis;uniform float uClipPos;uniform float uClipSide;',
@@ -1362,11 +1362,11 @@ Raymarcher.prototype._buildFrag=function(quality){
   '  bool isClipCap = false;',
   '  if (sceneSDF(ro + rd*t) < 0.0) nearCap = true;',
   '  if (!nearCap) {',
-  '    for (int i = 0; i < ITERS; i++) {',
-  '      if (t > tEx) break;',
+  '    for (int i = 0; i < 400; i++) {',
+  '      if (i >= uSteps || t > tEx) break;',
   '      vec3 mp = ro + rd*t;',
   '      float d = sceneSDF(mp);',
-  '      if (d < 0.003) { hit = true; break; }',
+  '      if (d < 0.003*uThresh) { hit = true; break; }',
   '      t += clamp(d/2.5, 0.0015, 0.35);',
   '    }',
   '  }',
@@ -1397,21 +1397,176 @@ Raymarcher.prototype._buildFrag=function(quality){
   '  fragColor = vec4(clamp(col,0.0,1.0),1.0);',
   '}'
   ];
-  return lines.join('\n').replace('ITERS',''+iters);
+  return lines.join('\n');
 };
 
 Raymarcher.prototype._mkShader=function(type,src){var gl=this.gl,s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))console.error('Shader error:',gl.getShaderInfoLog(s));return s;};
-Raymarcher.prototype._submitShader=function(quality){var gl=this.gl,vs=this._mkShader(gl.VERTEX_SHADER,'#version 300 es\nin vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}'),fs=this._mkShader(gl.FRAGMENT_SHADER,this._buildFrag(quality)),prg=gl.createProgram();gl.attachShader(prg,vs);gl.attachShader(prg,fs);gl.linkProgram(prg);gl.deleteShader(vs);gl.deleteShader(fs);if(this._pendingProg)gl.deleteProgram(this._pendingProg);this._pendingProg=prg;this._compiling=true;setShaderStatus(true);};
-Raymarcher.prototype._activateProg=function(prg){var gl=this.gl;if(this.prog&&this.prog!==prg)gl.deleteProgram(this.prog);this.prog=prg;gl.useProgram(prg);gl.bindBuffer(gl.ARRAY_BUFFER,this.quadBuf);var loc=gl.getAttribLocation(prg,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);var u=this.u,g=function(n){return gl.getUniformLocation(prg,n);};u.res=g('uRes');u.rot=g('uRot');u.zoom=g('uZoom');u.Str=g('uStructure');u.R=g('uR');u.N=g('uN');u.D=g('uD');u.Nx=g('uNx');u.Ny=g('uNy');u.Gap=g('uGap');u.Blend=g('uBlend');u.Twist=g('uTwist');u.TwistMode=g('uTwistMode');u.WarpMode=g('uWarpMode');u.WarpAmp=g('uWarpAmp');u.WarpFreq=g('uWarpFreq');u.WarpFrame=g('uWarpFrame');u.HPitch=g('uHPitch');u.HThick=g('uHThick');u.HInner=g('uHInner');u.HOuter=g('uHOuter');u.HStarts=g('uHStarts');u.HColHand=g('uHColHand');u.HZHand=g('uHZHand');u.HGap=g('uHGap');u.HBlend=g('uHBlend');u.BN=g('uBN');u.BRadius=g('uBRadius');u.BPitch=g('uBPitch');u.BFiber=g('uBFiber');u.BBlend=g('uBBlend');u.BColHand=g('uBColHand');u.BGap=g('uBGap');u.ZRampX=g('uZRampX');u.ZRampY=g('uZRampY');u.ZStepChk=g('uZStepChk');u.TopoMode=g('uTopoMode');u.Flip=g('uFlip');u.Iso=g('uIso');u.SheetW=g('uSheetW');u.WvR=g('uWvR');u.WvP=g('uWvP');u.WvA=g('uWvA');u.WvBlend=g('uWvBlend');u.WvZGap=g('uWvZGap');u.ClipAxis=g('uClipAxis');u.ClipPos=g('uClipPos');u.ClipSide=g('uClipSide');};
-Raymarcher.prototype.setParams=function(params){if(!this.gl)return;var prev=this.currentParams,needRebuild=!prev||!this.prog||params.quality!==(prev?prev.quality:null);this.currentParams=params;if(needRebuild){if(this.running)this._submitShader(params.quality);else this._rebuildPending=true;}this._dirty=true;if(!this._loopRunning)this._startLoop();};
-Raymarcher.prototype.render=function(){var gl=this.gl;if(!gl)return;if(this._compiling&&this._pendingProg){var ready=true;if(this._khr)ready=gl.getProgramParameter(this._pendingProg,this._khr.COMPLETION_STATUS_KHR);if(ready){if(gl.getProgramParameter(this._pendingProg,gl.LINK_STATUS)){this._activateProg(this._pendingProg);setShaderStatus(false);}else{console.error('Link failed:',gl.getProgramInfoLog(this._pendingProg));gl.deleteProgram(this._pendingProg);setShaderStatus(false);}this._pendingProg=null;this._compiling=false;this._dirty=true;}}if(!this.prog)return;var cw=this.canvas.clientWidth,ch=this.canvas.clientHeight;if(cw===0||ch===0)return;var dpr=Math.min(window.devicePixelRatio||1,1.5),w=Math.round(cw*dpr),h=Math.round(ch*dpr);if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;}gl.viewport(0,0,w,h);gl.useProgram(this.prog);var u=this.u,p=this.currentParams;gl.uniform2f(u.res,w,h);gl.uniformMatrix3fv(u.rot,false,new Float32Array(this.rotMat));gl.uniform1f(u.zoom,this.camZoom);if(u.ClipAxis)gl.uniform1f(u.ClipAxis,clipState.axis);if(u.ClipPos)gl.uniform1f(u.ClipPos,clipState.pos);if(u.ClipSide)gl.uniform1f(u.ClipSide,clipState.side);if(p){gl.uniform1f(u.Str,p.structure);gl.uniform1f(u.R,p.r);gl.uniform1f(u.N,p.n);gl.uniform1f(u.D,p.d);gl.uniform1f(u.Nx,p.nx);gl.uniform1f(u.Ny,p.ny);gl.uniform1f(u.Gap,p.gap);gl.uniform1f(u.Blend,p.blend);gl.uniform1f(u.Twist,p.twist);gl.uniform1f(u.TwistMode,p.twistMode);gl.uniform1f(u.WarpMode,p.warpMode);gl.uniform1f(u.WarpAmp,p.warpAmp);gl.uniform1f(u.WarpFreq,p.warpFreq);gl.uniform1f(u.WarpFrame,p.warpFrame);gl.uniform1f(u.HPitch,p.hPitch);gl.uniform1f(u.HThick,p.hThick);gl.uniform1f(u.HInner,p.hInner);gl.uniform1f(u.HOuter,p.hOuter);gl.uniform1f(u.HStarts,p.hStarts);gl.uniform1f(u.HColHand,p.hColHand);gl.uniform1f(u.HZHand,p.hZHand);gl.uniform1f(u.HGap,p.hGap);gl.uniform1f(u.HBlend,p.hBlend);gl.uniform1f(u.BN,p.bN);gl.uniform1f(u.BRadius,p.bRadius);gl.uniform1f(u.BPitch,p.bPitch);gl.uniform1f(u.BFiber,p.bFiber);gl.uniform1f(u.BBlend,p.bBlend);gl.uniform1f(u.BColHand,p.bColHand);gl.uniform1f(u.BGap,p.bGap);gl.uniform1f(u.ZRampX,p.zRampX);gl.uniform1f(u.ZRampY,p.zRampY);gl.uniform1f(u.ZStepChk,p.zChkStep);gl.uniform1f(u.TopoMode,p.topoMode);gl.uniform1f(u.Flip,p.flip);gl.uniform1f(u.Iso,p.iso);gl.uniform1f(u.SheetW,p.sheetW);gl.uniform1f(u.WvR,p.wvR);gl.uniform1f(u.WvP,p.wvP);gl.uniform1f(u.WvA,p.wvA);gl.uniform1f(u.WvBlend,p.wvBlend);gl.uniform1f(u.WvZGap,p.wvZGap);}if(f13View)f13View.apply(gl,this.prog);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);drawAxisGizmo(this.rotMat,this.canvas.clientWidth,this.canvas.clientHeight,this.camZoom);drawClipHandle(this.rotMat,this.canvas.clientWidth,this.canvas.clientHeight,this.camZoom);this._dirty=false;};
-Raymarcher.prototype._startLoop=function(){var self=this;self._loopRunning=true;var lastTs=0;function loop(ts){var dt=Math.min((ts-lastTs)/1000,0.05);lastTs=ts;if(self.running){if(self.autoRot){self._applyDelta(dt*25,0);self._dirty=true;}if(self._dirty||self._compiling){self.rotMat=self._orthonorm(self.rotMat);self.render();}}requestAnimationFrame(loop);}requestAnimationFrame(loop);};
+// Compile only when the generated source differs from the one already built or pending (structure key).
+// Dragged values are uniforms, so a slider tick never gets here with new source; a still-pending or
+// failed program is not rebuilt either.
+Raymarcher.prototype._submitShader=function(){var gl=this.gl,src=this._buildFrag();if(src===this._srcKey)return;this._srcKey=src;var vs=this._mkShader(gl.VERTEX_SHADER,'#version 300 es\nin vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}'),fs=this._mkShader(gl.FRAGMENT_SHADER,src),prg=gl.createProgram();gl.attachShader(prg,vs);gl.attachShader(prg,fs);gl.linkProgram(prg);gl.deleteShader(vs);gl.deleteShader(fs);if(this._pendingProg)gl.deleteProgram(this._pendingProg);this._pendingProg=prg;this._compiling=true;drawStats.compile++;setShaderStatus(true);};
+Raymarcher.prototype._activateProg=function(prg){var gl=this.gl;if(this.prog&&this.prog!==prg)gl.deleteProgram(this.prog);this.prog=prg;gl.useProgram(prg);gl.bindBuffer(gl.ARRAY_BUFFER,this.quadBuf);var loc=gl.getAttribLocation(prg,'p');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);var u=this.u,g=function(n){return gl.getUniformLocation(prg,n);};u.res=g('uRes');u.rot=g('uRot');u.zoom=g('uZoom');u.Str=g('uStructure');u.R=g('uR');u.N=g('uN');u.D=g('uD');u.Nx=g('uNx');u.Ny=g('uNy');u.Gap=g('uGap');u.Blend=g('uBlend');u.Twist=g('uTwist');u.TwistMode=g('uTwistMode');u.WarpMode=g('uWarpMode');u.WarpAmp=g('uWarpAmp');u.WarpFreq=g('uWarpFreq');u.WarpFrame=g('uWarpFrame');u.HPitch=g('uHPitch');u.HThick=g('uHThick');u.HInner=g('uHInner');u.HOuter=g('uHOuter');u.HStarts=g('uHStarts');u.HColHand=g('uHColHand');u.HZHand=g('uHZHand');u.HGap=g('uHGap');u.HBlend=g('uHBlend');u.BN=g('uBN');u.BRadius=g('uBRadius');u.BPitch=g('uBPitch');u.BFiber=g('uBFiber');u.BBlend=g('uBBlend');u.BColHand=g('uBColHand');u.BGap=g('uBGap');u.ZRampX=g('uZRampX');u.ZRampY=g('uZRampY');u.ZStepChk=g('uZStepChk');u.TopoMode=g('uTopoMode');u.Flip=g('uFlip');u.Iso=g('uIso');u.SheetW=g('uSheetW');u.WvR=g('uWvR');u.WvP=g('uWvP');u.WvA=g('uWvA');u.WvBlend=g('uWvBlend');u.WvZGap=g('uWvZGap');u.ClipAxis=g('uClipAxis');u.ClipPos=g('uClipPos');u.ClipSide=g('uClipSide');u.Steps=g('uSteps');u.Thresh=g('uThresh');u.Interact=g('uF13Interact');};
+Raymarcher.prototype.setParams=function(params){if(!this.gl)return;this.currentParams=params;if(this.running&&!this.lost)this._submitShader();kick();};
+// Uniform name -> params key (one table instead of 40 hand-written calls).
+Raymarcher.prototype._PMAP=[['Str','structure'],['R','r'],['N','n'],['D','d'],['Nx','nx'],['Ny','ny'],['Gap','gap'],['Blend','blend'],['Twist','twist'],['TwistMode','twistMode'],['WarpMode','warpMode'],['WarpAmp','warpAmp'],['WarpFreq','warpFreq'],['WarpFrame','warpFrame'],['HPitch','hPitch'],['HThick','hThick'],['HInner','hInner'],['HOuter','hOuter'],['HStarts','hStarts'],['HColHand','hColHand'],['HZHand','hZHand'],['HGap','hGap'],['HBlend','hBlend'],['BN','bN'],['BRadius','bRadius'],['BPitch','bPitch'],['BFiber','bFiber'],['BBlend','bBlend'],['BColHand','bColHand'],['BGap','bGap'],['ZRampX','zRampX'],['ZRampY','zRampY'],['ZStepChk','zChkStep'],['TopoMode','topoMode'],['Flip','flip'],['Iso','iso'],['SheetW','sheetW'],['WvR','wvR'],['WvP','wvP'],['WvA','wvA'],['WvBlend','wvBlend'],['WvZGap','wvZGap']];
+// Promote a finished background compile (KHR_parallel_shader_compile) to the live program.
+Raymarcher.prototype._pollCompile=function(){var gl=this.gl;if(!this._compiling||!this._pendingProg)return;var ready=true;if(this._khr)ready=gl.getProgramParameter(this._pendingProg,this._khr.COMPLETION_STATUS_KHR);if(!ready)return;if(gl.getProgramParameter(this._pendingProg,gl.LINK_STATUS)){this._activateProg(this._pendingProg);}else{console.error('Link failed:',gl.getProgramInfoLog(this._pendingProg));gl.deleteProgram(this._pendingProg);}setShaderStatus(false);this._pendingProg=null;this._compiling=false;renderDirty=true;};
+// Drawing buffer = CSS size x min(DPR, 2); changes only when the pane really changes size, never between tiers.
+Raymarcher.prototype._resize=function(){var cv=this.canvas,cw=cv.clientWidth,ch=cv.clientHeight;if(!cw||!ch)return false;var dpr=Math.min(window.devicePixelRatio||1,DPR_MAX),w=Math.round(cw*dpr),h=Math.round(ch*dpr);if(cv.width!==w||cv.height!==h){cv.width=w;cv.height=h;return true;}return false;};
+// One draw of the scene into fb (null = canvas) at W x H. rows=[y0,y1] limits it to a strip. interact: shadows off.
+Raymarcher.prototype._draw=function(fb,W,H,q,rows,interact){var gl=this.gl,u=this.u,p=this.currentParams;gl.bindFramebuffer(gl.FRAMEBUFFER,fb);gl.viewport(0,0,W,H);gl.useProgram(this.prog);if(rows){gl.enable(gl.SCISSOR_TEST);gl.scissor(0,rows[0],W,rows[1]-rows[0]);}gl.uniform2f(u.res,W,H);gl.uniformMatrix3fv(u.rot,false,new Float32Array(this.rotMat));gl.uniform1f(u.zoom,this.camZoom);if(u.ClipAxis)gl.uniform1f(u.ClipAxis,clipState.axis);if(u.ClipPos)gl.uniform1f(u.ClipPos,clipState.pos);if(u.ClipSide)gl.uniform1f(u.ClipSide,clipState.side);if(p){var m=this._PMAP;for(var i=0;i<m.length;i++)gl.uniform1f(u[m[i][0]],p[m[i][1]]);}gl.uniform1i(u.Steps,q.steps);gl.uniform1f(u.Thresh,q.thresh);if(f13View)f13View.apply(gl,this.prog);if(u.Interact)gl.uniform1f(u.Interact,interact?1:0);gl.drawArrays(gl.TRIANGLE_STRIP,0,4);if(rows)gl.disable(gl.SCISSOR_TEST);};
 
-document.getElementById('glCanvas').addEventListener('webglcontextlost',function(e){e.preventDefault();rm.running=false;document.getElementById('status').textContent='GPU reset';document.getElementById('status').style.color='#ef4444';});
+// ── Adaptive render quality ───────────────────────────────────────────────
+// Step limit and hit threshold are uniforms, so quality never recompiles. While the user orbits,
+// zooms, drags the clip handle or edits any control, frames use Q_INT rendered into an offscreen
+// framebuffer at AQ.scale (0.4-0.85, adapted to hold ~60 fps) and blitted LINEAR to the canvas.
+// ~150 ms after the last interaction one rest frame (Q_REST, the old "High") is rendered at full
+// canvas resolution in strips, then blitted once. The canvas buffer is CSS size x min(DPR, 2) and
+// never resizes between tiers. Rendering is on demand: the loop sleeps until something changes.
+var Q_INT={steps:160,thresh:1.0},Q_REST={steps:380,thresh:1.0};
+var IDLE_MS=150,DPR_MAX=2;
+var AQ={scale:0.7,min:0.4,max:0.85,cap:0.85,ema:0,prev:0,vsync:16.7,lastTick:0,pxCost:0};
+var renderDirty=true,refinePending=false,lastInteract=0,lastTs=0,loopOn=false;
+var drawStats={int:0,rest:0,restStrips:0,glyph:0,compile:0};   // frame counters (tests / profiling)
+function wakeLoop(){if(!loopOn){loopOn=true;lastTs=0;requestAnimationFrame(rmFrame);}}
+function requestRender(){renderDirty=true;wakeLoop();}
+function kick(){lastInteract=performance.now();renderDirty=true;wakeLoop();}
+document.addEventListener('input',kick,true);
+document.addEventListener('change',kick,true);
+var lowFB={fb:null,rb:null,w:0,h:0},hiFB={fb:null,rb:null,w:0,h:0};
+function ensureFB(o,w,h){
+  var gl=rm.gl;
+  if(o.fb&&o.w===w&&o.h===h)return true;
+  if(!o.fb){o.fb=gl.createFramebuffer();o.rb=gl.createRenderbuffer();}
+  gl.bindRenderbuffer(gl.RENDERBUFFER,o.rb);
+  gl.renderbufferStorage(gl.RENDERBUFFER,gl.RGBA8,w,h);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,o.fb);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.RENDERBUFFER,o.rb);
+  var ok=gl.checkFramebufferStatus(gl.FRAMEBUFFER)===gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  o.w=w;o.h=h;
+  if(!ok){gl.deleteFramebuffer(o.fb);gl.deleteRenderbuffer(o.rb);o.fb=null;}
+  return ok;
+}
+// Interactive target is allocated at AQ.max of the canvas, so scale changes only move the viewport.
+function ensureLowFB(){var cv=rm.canvas;return ensureFB(lowFB,Math.max(1,Math.ceil(cv.width*AQ.max)),Math.max(1,Math.ceil(cv.height*AQ.max)));}
+function ensureHiFB(){var cv=rm.canvas;return ensureFB(hiFB,cv.width,cv.height);}
+// Adaptive scale from an EMA of frame-to-frame time: down above ~20 ms, back up at the display rate.
+function aqSample(ts){
+  if(AQ.prev&&ts-AQ.prev<250){
+    var d=ts-AQ.prev;AQ.ema=AQ.ema?AQ.ema*0.7+d*0.3:d;
+    AQ.pxCost=AQ.ema/Math.max(1,rm.canvas.width*rm.canvas.height*AQ.scale*AQ.scale);   // ms per interactive pixel (upper bound: includes vsync wait)
+    var fast=Math.max(12,AQ.vsync*1.2),slow=Math.max(20,AQ.vsync*1.6);
+    if(AQ.ema>slow){AQ.cap=Math.max(AQ.min,AQ.scale-0.03);AQ.scale=Math.max(AQ.min,AQ.scale*0.88);AQ.ema=0;}
+    else if(AQ.ema<fast&&AQ.scale<AQ.cap)AQ.scale=Math.min(AQ.cap,AQ.scale+0.01);
+  }
+  AQ.prev=ts;
+}
+// interactive=true: Q_INT into the offscreen target + LINEAR blit. false: one blocking full-res rest frame.
+function drawMain(interactive){
+  var r=rm,gl=r.gl;if(!r.prog||r.lost)return;
+  if(r._resize())AQ.prev=0;
+  var cv=r.canvas,W=cv.width,H=cv.height;
+  if(interactive&&ensureLowFB()){
+    var ws=Math.max(1,Math.round(W*AQ.scale)),hs=Math.max(1,Math.round(H*AQ.scale));
+    r._draw(lowFB.fb,ws,hs,Q_INT,null,true);
+    gl.bindFramebuffer(gl.READ_FRAMEBUFFER,lowFB.fb);gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,null);
+    gl.blitFramebuffer(0,0,ws,hs,0,0,W,H,gl.COLOR_BUFFER_BIT,gl.LINEAR);
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+    drawStats.int++;
+  }else if(interactive){r._draw(null,W,H,Q_INT,null,true);drawStats.int++;}
+  else{r._draw(null,W,H,Q_REST,null,false);drawStats.rest++;}
+  drawAxisGizmo(r.rotMat,cv.clientWidth,cv.clientHeight,r.camZoom);
+  drawClipHandle(r.rotMat,cv.clientWidth,cv.clientHeight,r.camZoom);
+}
+// ── Progressive rest frame ────────────────────────────────────────────────
+// Rendered into a full-resolution offscreen target in horizontal strips over several display frames
+// (each strip sized to ~8 ms from the measured per-pixel cost) while the canvas keeps showing the
+// upscaled interactive frame; one blit swaps it in when complete. Interaction drops the strips.
+var REST={active:false,y:0,rows:0,last:0,strips:0,STRIP_MS:8,REST_COST:2};   // REST_COST: rest px vs interactive px (more steps, shadows)
+function restBegin(){
+  var r=rm;
+  if(r._resize())AQ.prev=0;
+  if(!r.prog||r.lost||!ensureHiFB())return false;
+  var W=r.canvas.width,H=r.canvas.height,lo=Math.ceil(H/16),hi=Math.ceil(H/4);
+  REST.rows=AQ.pxCost>0?Math.round(REST.STRIP_MS/(AQ.pxCost*REST.REST_COST*W)):Math.ceil(H/6);
+  REST.rows=Math.max(lo,Math.min(hi,REST.rows));
+  REST.active=true;REST.y=0;REST.last=0;REST.strips=0;
+  r.rotMat=r._orthonorm(r.rotMat);
+  return true;
+}
+// one strip; true when the frame is complete and on the canvas
+function restStep(ts){
+  var r=rm,gl=r.gl,W=r.canvas.width,H=r.canvas.height;
+  if(W!==hiFB.w||H!==hiFB.h){REST.active=false;renderDirty=true;return false;}   // pane resized mid-way
+  if(REST.last){var d=ts-REST.last,lo=Math.ceil(H/16),hi=Math.ceil(H/4);   // adapt to the measured strip interval
+    if(d>Math.max(24,AQ.vsync*1.5))REST.rows=Math.max(lo,Math.floor(REST.rows*0.6));
+    else if(d<Math.max(14,AQ.vsync*1.05))REST.rows=Math.min(hi,Math.ceil(REST.rows*1.3));}
+  REST.last=ts;
+  var y1=Math.min(H,REST.y+REST.rows);
+  r._draw(hiFB.fb,W,H,Q_REST,[REST.y,y1],false);REST.y=y1;REST.strips++;
+  if(REST.y<H)return false;
+  gl.bindFramebuffer(gl.READ_FRAMEBUFFER,hiFB.fb);gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER,null);
+  gl.blitFramebuffer(0,0,W,H,0,0,W,H,gl.COLOR_BUFFER_BIT,gl.NEAREST);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  REST.active=false;drawStats.rest++;drawStats.restStrips=REST.strips;
+  return true;
+}
+function drawRestProgressiveAll(){if(!restBegin())return;var t=0;while(REST.active)restStep(t+=16);}   // timing harness only
+// Stiffness glyph: drawn on change, spun at <= 30 fps while on screen, paused while the main view moves.
+var glyphOnScreen=false,glyphDirty=false,glyphLast=0;
+var GLYPH_SPIN=0.18;   // rad/s (was 0.003 rad per 60 Hz frame)
+var REDUCE_MOTION=window.matchMedia('(prefers-reduced-motion:reduce)');
+function glyphRedraw(){glyphDirty=true;wakeLoop();}
+// On-demand loop: the main view is drawn only when something changed (renderDirty) or auto-rotate is on,
+// at interactive quality while moving, then once at rest quality when the user goes idle. It then sleeps.
+function rmFrame(ts){
+  loopOn=false;
+  var r=rm;if(!r||!r.gl||r.lost)return;
+  if(AQ.lastTick){var d0=ts-AQ.lastTick;if(d0>4&&d0<AQ.vsync)AQ.vsync=d0;}AQ.lastTick=ts;   // display frame interval
+  var dt=lastTs?Math.min((ts-lastTs)/1000,0.05):1/60;lastTs=ts;
+  if(r.running)r._pollCompile();
+  if(r.autoRot){r._applyDelta(dt*25,0);renderDirty=true;}
+  var now=performance.now();
+  var moving=r.autoRot||r._drag||r._scrub||(now-lastInteract<IDLE_MS)||!!(f13View&&f13View.interacting);
+  var drewInt=false;
+  if(r.running&&r.prog){
+    if(renderDirty){                     // any change: show a quick frame now, refine when idle
+      renderDirty=false;REST.active=false;
+      r.rotMat=r._orthonorm(r.rotMat);
+      drawMain(true);refinePending=true;drewInt=true;
+    }else if(refinePending&&moving){
+      REST.active=false;                 // interaction resumed: drop the strips
+    }else if(refinePending){
+      if(!REST.active&&!restBegin()){drawMain(false);refinePending=false;}
+      else if(restStep(ts)){refinePending=false;AQ.cap=Math.min(AQ.max,AQ.cap+0.05);}   // let the next interaction probe a little higher
+    }
+  }else if(r.running&&!r._compiling)renderDirty=false;   // no program and none coming (failed link): do not spin
+  if(drewInt)aqSample(ts);else AQ.prev=0;
+  // stiffness glyph
+  var spin=glyphOnScreen&&!!sprog&&!moving&&!REDUCE_MOTION.matches;
+  if(sprog&&glyphOnScreen&&glyphDirty){drawStiffnessSurface(0);glyphDirty=false;glyphLast=spin?ts:0;}
+  else if(spin){
+    if(!glyphLast)glyphLast=ts;
+    else if(ts-glyphLast>=33){drawStiffnessSurface(Math.min((ts-glyphLast)/1000,0.1)*GLYPH_SPIN);glyphLast=ts;}
+  }else glyphLast=0;
+  if(r.autoRot||renderDirty||refinePending||moving||r._compiling||spin){loopOn=true;requestAnimationFrame(rmFrame);}
+}
+
+// Lost context (GPU reset, swiftshader under load): stop drawing, then rebuild programs, buffers and
+// framebuffers on the same context object when the browser restores it, and redraw.
+document.getElementById('glCanvas').addEventListener('webglcontextlost',function(e){e.preventDefault();rm.lost=true;REST.active=false;refinePending=false;document.getElementById('status').textContent='GPU reset, recovering';document.getElementById('status').style.color='#ef4444';});
+document.getElementById('glCanvas').addEventListener('webglcontextrestored',function(){
+  lowFB.fb=lowFB.rb=hiFB.fb=hiFB.rb=null;lowFB.w=lowFB.h=hiFB.w=hiFB.h=0;
+  rm._initResources();rm.lost=false;
+  document.getElementById('status').removeAttribute('style');
+  if(rm.running){rm._submitShader();}
+  requestRender();
+});
 window.addEventListener('beforeunload',function(){if(rm&&rm.gl){if(rm._pendingProg)rm.gl.deleteProgram(rm._pendingProg);if(rm.prog)rm.gl.deleteProgram(rm.prog);}});
 
 function setShaderStatus(c){var dot=document.getElementById('dotShader'),lbl=document.getElementById('labelShader');if(c){dot.style.background='#facc15';lbl.textContent='compiling...';lbl.style.color='#facc15';}else{dot.style.background='#22d3ee';lbl.textContent='ready';lbl.style.color='#22d3ee';}}
-function showIndicators(show){document.getElementById('indicators').style.display=show?'flex':'none';document.getElementById('qualityOverlay').style.display=show?'flex':'none';}
+function showIndicators(show){document.getElementById('indicators').style.display=show?'flex':'none';}
 
 
 // ── Axis gizmo ────────────────────────────────────────────────────────────
@@ -1420,10 +1575,10 @@ function showIndicators(show){document.getElementById('indicators').style.displa
 function drawAxisGizmo(rotMat,canvasW,canvasH,camZoom){
   var cv=document.getElementById('axisCanvas');
   if(!cv||cv.style.display==='none')return;
-  var dpr=Math.min(window.devicePixelRatio||1,2);
-  cv.width=Math.round(canvasW*dpr);cv.height=Math.round(canvasH*dpr);
+  var dpr=Math.min(window.devicePixelRatio||1,2),aw=Math.round(canvasW*dpr),ah=Math.round(canvasH*dpr);
+  if(cv.width!==aw||cv.height!==ah){cv.width=aw;cv.height=ah;}   // size only on a real resize (assigning width reallocates the buffer)
   var ctx=cv.getContext('2d');
-  ctx.scale(dpr,dpr);ctx.clearRect(0,0,canvasW,canvasH);
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,canvasW,canvasH);
   var H=Math.PI;
   // Camera sits at rotMat*(0,0,zoom) so its world position direction = col 2 of rotMat
   var cx=rotMat[6],cy=rotMat[7],cz=rotMat[8];
@@ -1463,18 +1618,18 @@ function drawAxisGizmo(rotMat,canvasW,canvasH,camZoom){
   });
 }
 
-function onClipPill(axis){if(clipState.axis===axis){clipState.axis=0;}else{clipState.axis=axis;clipState.pos=0.0;clipState.side=1;}updateClipPills();if(rm)rm._dirty=true;}
+function onClipPill(axis){if(clipState.axis===axis){clipState.axis=0;}else{clipState.axis=axis;clipState.pos=0.0;clipState.side=1;}updateClipPills();if(rm)kick();}
 function updateClipPills(){var nm={1:'X',2:'Y',3:'Z'};[1,2,3].forEach(function(a){var el=document.getElementById('clipPill'+nm[a]);if(!el)return;el.classList.toggle('active',clipState.axis===a);el.setAttribute('aria-pressed',clipState.axis===a?'true':'false');if(window.F13UI&&F13UI.onClipChange&&clipState.axis===a)F13UI.onClipChange(a);});if(clipState.axis===0&&window.F13UI&&F13UI.onClipChange)F13UI.onClipChange(0);}
 function drawClipHandle(rotMat,canvasW,canvasH,camZoom){window.__clipHandleScreen=null;if(clipState.axis<1)return;var cv=document.getElementById('axisCanvas');if(!cv||cv.style.display==='none')return;var ctx=cv.getContext('2d');var H_HALF=Math.PI;function proj(p){var tx=rotMat[0]*p[0]+rotMat[1]*p[1]+rotMat[2]*p[2];var ty=rotMat[3]*p[0]+rotMat[4]*p[1]+rotMat[5]*p[2];var tz=rotMat[6]*p[0]+rotMat[7]*p[1]+rotMat[8]*p[2];var pcz=tz-camZoom;if(pcz>-0.1)return null;var sscl=Math.min(canvasW,canvasH);return [canvasW/2+(-1.6*tx/pcz)*sscl,canvasH/2-(-1.6*ty/pcz)*sscl];}var aIdx=clipState.axis-1,cp=clipState.pos*H_HALF;var c=[0,0,0];c[aIdx]=cp;var sc=proj(c);if(!sc)return;var col=['#22d3ee','#e879f9','#facc15'][aIdx];ctx.save();var free=[0,1,2].filter(function(k){return k!==aIdx;});var sg=[[-1,-1],[1,-1],[1,1],[-1,1]];var pts=sg.map(function(g){var p=[0,0,0];p[aIdx]=cp;p[free[0]]=g[0]*H_HALF;p[free[1]]=g[1]*H_HALF;return proj(p);});if(pts.every(Boolean)){ctx.globalAlpha=0.5;ctx.lineWidth=1.5;ctx.strokeStyle=col;ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);ctx.lineTo(pts[1][0],pts[1][1]);ctx.lineTo(pts[2][0],pts[2][1]);ctx.lineTo(pts[3][0],pts[3][1]);ctx.closePath();ctx.stroke();}ctx.globalAlpha=0.95;ctx.lineWidth=2;ctx.strokeStyle=col;ctx.beginPath();ctx.arc(sc[0],sc[1],9,0,6.2832);ctx.stroke();ctx.globalAlpha=1;ctx.fillStyle=col;ctx.beginPath();ctx.arc(sc[0],sc[1],3.2,0,6.2832);ctx.fill();ctx.restore();var e=[0,0,0];e[aIdx]=cp+0.4;var se=proj(e);var dirx=0,diry=0,len=0;if(se){var dx=se[0]-sc[0],dy=se[1]-sc[1];len=Math.hypot(dx,dy)||1;dirx=dx/len;diry=dy/len;}window.__clipHandleScreen={x:sc[0],y:sc[1],dirx:dirx,diry:diry,len:len,axisStep:0.4};}
 var rm=new Raymarcher(document.getElementById('glCanvas'));
-f13View=f13ViewInit({tool:'bundle',host:document.getElementById('cw'),canvas:document.getElementById('glCanvas'),redraw:function(){rm._dirty=true;}});
+f13View=f13ViewInit({tool:'bundle',host:document.getElementById('cw'),canvas:document.getElementById('glCanvas'),redraw:function(){requestRender();}});
 
-function scheduleRender(){clearTimeout(debounceTimer);debounceTimer=setTimeout(function(){rm.setParams(getParams());},50);}
+// Params are uniforms: apply them at once (no debounce); the loop coalesces ticks into one frame.
+function scheduleRender(){rm.setParams(getParams());}
 // A design change: drop homogenization results (they described the previous design), then redraw.
 function regenerate(){clearHomog();scheduleRender();}
 
 function onP(input,dispId,decimals){var val=parseFloat(input.value),dec=decimals===0?0:(decimals||3);document.getElementById(dispId).textContent=val.toFixed(dec);regenerate();}
-function onQuality(q){currentQuality=q;['low','medium','high'].forEach(function(v){document.getElementById('btnQ'+({low:'Low',medium:'Med',high:'High'}[v])).classList.toggle('active',v===q);});scheduleRender();}
 // Rows carry data-st="<structures>"; html[data-s] picks which show (CSS). Weave has no Twist controls: its tab stays, the section shows a note.
 function onStructure(){structure=parseInt(document.getElementById('structure').value);document.documentElement.dataset.s=structure;document.getElementById('sec-twist').classList.toggle('na',structure===3);document.querySelectorAll('.sb-fallback [data-section="twist"]').forEach(function(b){b.classList.toggle('dim',structure===3);});if(window.F13UI&&F13UI.onStructure)F13UI.onStructure(structure);regenerate();}
 function onShape(s){beamShape=s;['Circle','Rounded','Square'].forEach(function(n){document.getElementById('btnShape'+n).classList.toggle('active',n.toLowerCase()===s);});regenerate();}
@@ -1570,11 +1725,21 @@ function initStiffnessGL(){
   if(!squadBuf){squadBuf=sgl.createBuffer();sgl.bindBuffer(sgl.ARRAY_BUFFER,squadBuf);sgl.bufferData(sgl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),sgl.STATIC_DRAW);}
   sRotMat=smat3Mul(sRotAxisAngle(0,1,0,0.6),sRotAxisAngle(1,0,0,-0.3));
   sInitialized=true;
-  (function sloop(){requestAnimationFrame(sloop);drawStiffnessSurface();})();
+  if(!sHooked){
+    sHooked=true;
+    // Redraw on change; spin only while the glyph is on screen (not in a hidden section, not off the page).
+    if(window.IntersectionObserver)new IntersectionObserver(function(es){glyphOnScreen=es[es.length-1].isIntersecting;if(glyphOnScreen)glyphRedraw();}).observe(cv);
+    else{glyphOnScreen=true;}
+    cv.addEventListener('webglcontextlost',function(e){e.preventDefault();sprog=null;});
+    cv.addEventListener('webglcontextrestored',function(){squadBuf=null;sInitialized=false;if(sLastArgs)rebuildStiffnessShader.apply(null,sLastArgs);});
+    REDUCE_MOTION.addEventListener&&REDUCE_MOTION.addEventListener('change',glyphRedraw);
+  }
   return true;
 }
+var sHooked=false,sLastArgs=null;
 
 function rebuildStiffnessShader(Ex,Ey,Ez,Gxy,nu){
+  sLastArgs=[Ex,Ey,Ez,Gxy,nu];
   if(!sInitialized&&!initStiffnessGL())return;
   var Emean=(Ex+Ey+Ez)/3;
   sZoom=3.4*(Math.max(Ex,Ey,Ez)*1.08/Emean);
@@ -1591,16 +1756,18 @@ function rebuildStiffnessShader(Ex,Ey,Ez,Gxy,nu){
   suRes=sgl.getUniformLocation(sprog,'res');
   suRot=sgl.getUniformLocation(sprog,'rot');
   suZoom=sgl.getUniformLocation(sprog,'zoom');
+  glyphRedraw();
 }
 
-function drawStiffnessSurface(){
-  if(!sprog||!suRes)return;
+// dAng: spin step in radians (0 = redraw as is).
+function drawStiffnessSurface(dAng){
+  if(!sprog||!suRes||sgl.isContextLost())return;
+  drawStats.glyph++;
   var cv=document.getElementById('ellcv');
   var wrap=document.getElementById('ellcv-wrap');
   var w=Math.max(wrap?wrap.offsetWidth:cv.offsetWidth,40);
   if(cv.width!==w){cv.width=w;cv.height=w;}
-  sRotMat=smat3Mul(sRotAxisAngle(0,1,0,0.003),sRotMat);
-  sRotMat=sOrthonorm(sRotMat);
+  if(dAng){sRotMat=smat3Mul(sRotAxisAngle(0,1,0,dAng),sRotMat);sRotMat=sOrthonorm(sRotMat);}
   sgl.viewport(0,0,cv.width,cv.height);
   sgl.uniform2f(suRes,cv.width,cv.height);
   sgl.uniformMatrix3fv(suRot,false,new Float32Array(sRotMat));
@@ -1847,11 +2014,10 @@ function onExportJSON(){
 
 
 setTimeout(function(){showIndicators(true);rm.running=true;updateClipPills();rm.setParams(getParams());},100);
-window.onresize=function(){if(rm)rm.render();};
+window.onresize=function(){requestRender();};
 
 // ── Layout shell ──────────────────────────────────────────────────────────
 // The viewer pane changes size with the phone sheet and the breakpoint: redraw on every resize.
-function requestRender(){if(typeof rm!=='undefined'&&rm)rm._dirty=true;}
 if(window.ResizeObserver)new ResizeObserver(requestRender).observe(document.getElementById('cw'));
 // ==== F13LD UI template · layout.js (sections one at a time + phone bottom sheet; from F13LD.tpms v1.4.0) ====
 (function(){
@@ -5746,12 +5912,6 @@ html.f13w #w-clip>.clip-lbl{display:inline-flex;align-items:center;font-size:11p
         what:'Estimates the directional-stiffness surface, volume fraction, and surface area for the current geometry.',
         see:'Fills the stiffness glyph, the per-axis moduli, the Zener ratio, and the metrics row.',
         why:'A fast estimate (MIL fabric + Hashin\u2013Shtrikman ceiling); F13LD.lab does the rigorous FFT version.' }
-    ]},
-    { title:'Render', items:[
-      { id:'quality', label:'quality \u00b7 Low / Med / High',
-        what:'Render quality of the 3D preview (top of the viewport).',
-        see:'Higher = smoother fibers, slower; lower = faster, blockier.',
-        why:'Preview fidelity only \u2014 it does not change geometry or export.' }
     ]},
     { title:'Handoff', items:[
       { id:'export', label:'Export JSON / Queue / Mesh / Lab',
