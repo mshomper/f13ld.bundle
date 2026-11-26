@@ -6,7 +6,7 @@ A browser-native designer for interwoven implicit scaffolds — twisted beam arr
 
 **Live tool:** [mshomper.github.io/f13ld.bundle](https://mshomper.github.io/f13ld.bundle/)
 
-<img width="1215" height="1069" alt="bundlescreenshot" src="https://github.com/user-attachments/assets/59cbe4c2-1259-4426-a1aa-362b8790b89d" />
+<img width="1440" height="900" alt="F13LD.bundle" src="docs/screenshot.png" />
 
 
 ---
@@ -107,18 +107,9 @@ Single HTML file. No build step, no npm, no server.
 
 ---
 
-## F13LD suite
+## Part of the F13LD Suite
 
-| Tool | Description |
-|---|---|
-| [f13ld.tpms-builder](https://mshomper.github.io/f13ld.tpms) | Periodic TPMS surface design with PI-TPMS and FFT-CG homogenisation |
-| [f13ld.beam](https://mshomper.github.io/f13ld.beam) | Strut/beam lattice design — multiple unit-cell topologies, 3MF Beam Lattice export |
-| **f13ld.bundle** | This tool — twisted fiber bundles, helicoids, braids, and weaves |
-| [f13ld.noise](https://mshomper.github.io/f13ld.noise) | Stochastic noise scaffold explorer |
-| [f13ld.grain](https://mshomper.github.io/f13ld.grain) | Spinodoid / Gaussian / hyperuniform anisotropic grain fields |
-| [f13ld.mesh](https://mshomper.github.io/f13ld.mesh) | Implicit scaffold → watertight 3MF exporter |
-
-All tools share a common JSON recipe schema. A Bundle recipe can be ingested directly by [f13ld.mesh](https://mshomper.github.io/f13ld.mesh).
+The full tool list, what each one does and how recipes move between them: **[f13ld.app](https://f13ld.app)**.
 
 ---
 
